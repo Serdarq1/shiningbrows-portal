@@ -1,0 +1,24 @@
+{% include 'base.html' %}
+<div class="flex flex-center justify-center mt-12">
+      <div class="text-center max-w-lg bg-white p-10 rounded-2xl shadow-lg">
+    <div class="text-pink-600 text-6xl mb-4">⚠️</div>
+
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">İşlem Başarısız Oldu</h1>
+
+    <p class="text-gray-600 text-lg mb-8">
+      Girilen şifre veya kullanıcı adı hatalı. <br />
+      Lütfen tekrar deneyin
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="{{url_for('index')}}"
+         class="w-full sm:w-auto inline-block px-6 py-3 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition">
+        Ana sayfaya dön
+      </a>
+      <a href="{{url_for('login')}}"
+         class="w-full sm:w-auto inline-block px-6 py-3 bg-pink-600 text-white font-medium rounded-lg hover:bg-pink-700 transition">
+        Giriş Yap
+      </a>
+    </div>
+  </div>
+</div>

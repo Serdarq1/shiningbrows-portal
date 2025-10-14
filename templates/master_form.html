@@ -1,0 +1,42 @@
+{% include 'base.html' %}
+<body class="min-h-screen bg-gray-50">
+    <header class="w-full border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">Shining Brows — Master Ekle/Düzenle</h1>
+        <nav class="flex items-center gap-4 text-sm">
+        <a href="{{url_for('index')}}"> <img src="../static/assets/SERDAR AKOVA (1).png"  class="w-24"/></a>
+        </nav>
+        </div>
+  </header>
+  <div class="max-w-xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-6">Master Ekle / Düzenle</h1>
+
+    <form method="POST" action="{{ url_for('save_master') }}" class="bg-white p-6 rounded-2xl shadow space-y-4">
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Ad Soyad</label>
+        <input name="name" required class="w-full border rounded-lg px-3 py-2" value="{{ master.name if master else '' }}">
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Şehir (region)</label>
+        <input name="region" required class="w-full border rounded-lg px-3 py-2" placeholder="İzmir, Ankara, ..." value="{{ master.region if master else '' }}">
+        <p class="text-xs text-gray-500 mt-1">* Veritabanında <strong>region</strong> alanı benzersizdir.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Öğrenci Sayısı</label>
+          <input name="student_count" type="number" min="0" class="w-full border rounded-lg px-3 py-2" value="{{ master.student_count if master else 0 }}">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Renk</label>
+          <input name="color" class="w-full border rounded-lg px-3 py-2" placeholder="Yeşil / Sarı / Kırmızı" value="{{ master.color if master else '' }}">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <a href="{{ url_for('dashboard') }}" class="px-4 py-2 rounded-lg border hover:opacity-50 transition">İptal</a>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-pink-600 transition cursor-pointer text-white hover:bg-pink-700">Kaydet</button>
+      </div>
+    </form>
+  </div>

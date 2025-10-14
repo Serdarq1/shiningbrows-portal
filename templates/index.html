@@ -1,0 +1,18 @@
+{% include 'base.html' %}
+  {% include 'navbar.html' %}
+  <main class="flex flex-col items-center justify-center text-center flex-1 px-6">
+    <h1 class="text-5xl font-extrabold text-gray-900 leading-tight">
+     Shining Brows Master Portalına<br><span class="text-pink-600"> Hoşgeldiniz.</span>
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-xl">
+      İnteraktif Türkiye haritamız ile ülke genelinde Master performansını görüntüleyin.
+    </p>
+
+    <a href="{{url_for('login')}}"
+       class="mt-8 inline-block px-8 py-4 bg-pink-600 text-white text-lg font-semibold rounded-full shadow-lg hover:bg-pink-700 hover:shadow-xl transition duration-300">
+        Haritayı Görüntüle
+    </a>
+  </main>
+  {% include 'footer.html' %}
+</body>
+</html>
