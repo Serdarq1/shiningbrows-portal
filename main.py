@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, Boolean
+from sqlalchemy import Integer, String, Boolean, text, inspect
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from functools import wraps
@@ -53,6 +53,7 @@ class Masters(db.Model):
     student_count: Mapped[int] = mapped_column(Integer, nullable=False)
     region: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String(250))
+    total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0,server_default="0",)
 
 class User(UserMixin):
     def __init__(self, role: str, name: str = "User"):
@@ -67,6 +68,17 @@ def load_user(user_id):
     return None
 
 with app.app_context():
+    insp = inspect(db.engine)
+    cols = [c["name"] for c in insp.get_columns("masters")]
+    if "total_students" not in cols:
+        db.session.execute(
+            text("ALTER TABLE masters ADD COLUMN total_students INTEGER DEFAULT 0")
+        )
+        db.session.commit()
+        print("✅ Added total_students column.")
+    else:
+        print("ℹ️ total_students already exists.")
+    
     db.create_all()
 
 
@@ -133,6 +145,7 @@ def dashboard():
         _normalize_tr(r.region): {
             "name": r.name,
             "student_count": r.student_count,
+            "total_students": r.total_students,
             "color": r.color
         } for r in rows
     }
@@ -151,21 +164,29 @@ def save_master():
     region = request.form.get('region','').strip()
     color = request.form.get('color','').strip()
     student_count = int(request.form.get('student_count','0') or 0)
+    total_students = int(request.form.get('total_students','0') or 0)
 
     if not (name and region):
         return render_template('error.html'), 400
 
-    # Upsert by unique region
     existing = db.session.scalar(db.select(Masters).where(Masters.region == region))
     if existing:
         existing.name = name
         existing.color = color
         existing.student_count = student_count
+        existing.total_students = total_students
     else:
-        db.session.add(Masters(name=name, region=region, color=color, student_count=student_count))
+        db.session.add(Masters(
+            name=name,
+            region=region,
+            color=color,
+            student_count=student_count,
+            total_students=total_students,
+        ))
 
     db.session.commit()
     return redirect(url_for('dashboard'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

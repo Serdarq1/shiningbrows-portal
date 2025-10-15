@@ -141,7 +141,8 @@ const normalize = (s) => {
         ? `<div><b>${prov}</b>
              <div class="mt-1 text-sm">
                <div><span class="text-gray-500">Master:</span> <b>${rec.name}</b></div>
-               <div><span class="text-gray-500">Öğrenci:</span> <b>${rec.student_count}</b></div>
+               <div><span class="text-gray-500">Aylık Öğrenci:</span> <b>${rec.student_count}</b></div>
+                <div><span class="text-gray-500">Toplam Öğrenci:</span> <b>${rec.total_students}</b></div>
                <div><span class="text-gray-500">Renk:</span> <b class='capitalize'>${rec.color}</b></div>
              </div></div>`
         : `<div><b>${prov}</b><div class="text-sm text-gray-500 mt-1">Veri yok</div></div>`;
@@ -163,7 +164,8 @@ const normalize = (s) => {
         document.getElementById('info-custom').innerHTML = rec
           ? `<div class="space-y-1">
                <div><span class="text-gray-500">Master:</span> <b>${rec.name}</b></div>
-               <div><span class="text-gray-500">Öğrenci:</span> <b>${rec.student_count}</b></div>
+               <div><span class="text-gray-500">Aylık fÖğrenci:</span> <b>${rec.student_count}</b></div>
+               <div><span class="text-gray-500">Toplam Öğrenci:</span> <b>${rec.total_students}</b></div>
                <div><span class="text-gray-500">Renk:</span> <b class='capitalize'>${rec.color}</b></div>
              </div>`
           : `<span class="text-gray-500">Veri yok.</span>`;
