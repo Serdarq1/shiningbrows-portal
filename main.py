@@ -68,17 +68,6 @@ def load_user(user_id):
     return None
 
 with app.app_context():
-    insp = inspect(db.engine)
-    cols = [c["name"] for c in insp.get_columns("masters")]
-    if "total_students" not in cols:
-        db.session.execute(
-            text("ALTER TABLE masters ADD COLUMN total_students INTEGER DEFAULT 0")
-        )
-        db.session.commit()
-        print("✅ Added total_students column.")
-    else:
-        print("ℹ️ total_students already exists.")
-    
     db.create_all()
 
 
