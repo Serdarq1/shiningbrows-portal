@@ -21,7 +21,7 @@
         <img
           src="{{ url_for('static', filename='assets/SERDAR AKOVA (1).png') }}"
           alt="Shining Brows"
-          class="h-12 w-auto transition-all duration-300"
+          class="h-12 w-12 w-auto transition-all duration-300"
           id="sb-logo"
         />
       </a>
@@ -33,20 +33,11 @@
 
         <a href="{{ url_for('account') }}"
            class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Hesap</a>
-
-        {% if current_user.is_authenticated %}
-          <a href="{{ url_for('logout') }}"
-             class="inline-flex items-center rounded-full bg-gray-900 text-white px-4 py-2
-                    transition-all duration-200 hover:-translate-y-0.5 hover:bg-black/90 shadow-sm">
-            Çıkış Yap
-          </a>
-        {% else %}
           <a href="{{ url_for('login') }}"
              class="inline-flex items-center rounded-full bg-gray-900 text-white px-4 py-2
-                    transition-all duration-200 hover:-translate-y-0.5 hover:bg-black/90 shadow-sm">
+                    transition-all duration-200 hover:-translate-y-0.5 hover:bg-black/90 shadow-sm w-24">
             Giriş Yap
           </a>
-        {% endif %}
       </nav>
     </div>
   </div>
