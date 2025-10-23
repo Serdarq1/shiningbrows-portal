@@ -18,15 +18,31 @@
   </style>
 </head>
 <body class="min-h-screen bg-gray-50">
-  <!-- Top Bar -->
-  <header class="w-full border-b bg-white">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">Shining Brows — Portal</h1>
-      <nav class="flex items-center gap-4 text-sm">
-       <a href="{{url_for('index')}}"> <img src="../static/assets/SERDAR AKOVA (1).png"  class="w-24"/></a>
-      </nav>
-    </div>
-  </header>
+
+</div>
+{% include 'navbar.html' %}
+  {% if greeting_name %}
+<div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
+  <h2 class="text-2xl font-semibold text-gray-800 font-thin">Hoşgeldin, <span class="italic font-bold">{{ greeting_name }}</span> 👋</h2>
+  <p class="text-gray-600 mt-2">
+    {% if monthly_students < 1 %}
+      <p>Bu ay maalesef öğrencin yok.</p>
+      Shining Brows ürünlerinde indirim alma hakkı için öğrenci bulman gerekiyor!
+    {% else %}
+      Bu ay <strong class="text-black">{{ monthly_students }}</strong> öğrencin var.<br>
+      Shining Brows ürünlerini <strong class="text-green-600">{{ discount }}%</strong> indirimle alabilirsin.
+    {% endif %}
+    
+  </p>
+{% elif current_user.is_authenticated and can_edit %}
+<div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
+  <h2 class="text-2xl font-semibold text-gray-800">Hoşgeldin, Güzide Korkmaz 👋</h2>
+  <p class="text-gray-600 mt-2">
+    "+" ikonundan bilgileri güncelleyebilirsin.
+  </p>
+</div>
+{% endif %}
+
 
   <!-- KPIs -->
   <section class="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -44,16 +60,20 @@
     </div>
   </section>
 
+ 
+
   <!-- Map + Info -->
   <main class="max-w-7xl mx-auto px-6 pb-10">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Map -->
       <div class="lg:col-span-2 bg-white rounded-2xl shadow p-4">
-        <div id="map" class="rounded-xl border border-gray-200"></div>
+        <div id="map" class="rounded-xl border border-gray-200">
+          <p class="text-center text-md text-gray-600 mt-4 ">Shining Brows Uzman Haritası</p>
+        </div>
       </div>
 
       <!-- Info Panel -->
-      <aside class="bg-white rounded-2xl shadow p-6">
+      <aside class="bg-white rounded-2xl shadow p-6 text-left">
         <h2 class="text-lg font-bold text-gray-900">Bölge Detayları</h2>
         <div class="mt-4 space-y-2 text-sm">
           <div class="flex justify-between">
@@ -66,10 +86,52 @@
           <h3 class="text-sm font-semibold text-gray-700">Detaylar</h3>
           <div id="info-custom" class="mt-2 text-sm text-gray-900">Veri yok.</div>
         </div>
+        
+        <div class="text-gray-800 text-sm font-bold mt-8">
+        <p>Bu ayki toplam öğrenci sayısı: {{total_month}} </p>
+        <p>Toplam Shining Brows Uzman Sayısı: {{total_alltime}} </p>
+      </div>
       </aside>
+
+      <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
+        <div class="text-2xl font-bold">
+         <div>
+           <p class="text-red-800 text-sm">Kırmızı Bölge:</p>
+           <p class="text-sm font-medium">Aynı ay içerisinde hiç eğitim veremeyen Masterlar. Ürün alımlarında indirim uygulanmaz.</p>
+         </div>
+        </div>
     </div>
+
+     <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
+        <div class="text-2xl font-bold">
+         <div>
+           <p class="text-yellow-600 text-sm">Sarı Bölge:</p>
+           <p class="text-sm font-medium">Aynı ay içerisinde minimum 3 öğrenciye eğitim vermiş Masterlar. Ürün alımlarında %20 indirim uygulanır.</p>
+         </div>
+        </div>
+    </div>
+
+     <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
+        <div  class="text-2xl font-bold">
+         <div>
+           <p class="text-green-600 text-sm">Yeşil Bölge:</p>
+           <p class="text-sm font-medium">Aynı ay içerisinde minimum 5 öğrenciye eğitim vermiş Masterlar. Ürün alımlarında %40 indirim uygulanır.</p>
+         </div>
+        </div>
+    </div>
+
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-4 mt-4 text-gray-500">
+        <div class="text-2xl font-bold">
+         <div>
+           <p class="text-gray-800 text-sm">Not:</p>
+           <p class="text-sm font-medium">Bir ayda 1 veya 2 öğrenciye eğitim vermiş olan uzmanlar %10 indirimden yararlanabilir. Aynı zamanda 6 ay üst üste yeşil bölgede olan her uzman için <span class="gold-master-text">Gold Master</span> logosu hazırlanır.</p>
+         </div>
+        </div>
   </main>
-  {% if current_user.is_authenticated and current_user.role in ['authorized'] %}
+  
+  {% if can_edit %}
 <a
   href="{{url_for('master_form')}}"
   class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-700 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-pink-300 shadow-lg flex items-center justify-center"
@@ -164,7 +226,7 @@ const normalize = (s) => {
         document.getElementById('info-custom').innerHTML = rec
           ? `<div class="space-y-1">
                <div><span class="text-gray-500">Master:</span> <b>${rec.name}</b></div>
-               <div><span class="text-gray-500">Aylık fÖğrenci:</span> <b>${rec.student_count}</b></div>
+               <div><span class="text-gray-500">Aylık Öğrenci:</span> <b>${rec.student_count}</b></div>
                <div><span class="text-gray-500">Toplam Öğrenci:</span> <b>${rec.total_students}</b></div>
                <div><span class="text-gray-500">Renk:</span> <b class='capitalize'>${rec.color}</b></div>
              </div>`
@@ -188,6 +250,44 @@ const normalize = (s) => {
     return div;
   };
   legend.addTo(map);
+</script>
+<script>
+  // Navbar shrink on scroll
+  (function () {
+    const nav = document.getElementById('sb-navbar');
+    const logo = document.getElementById('sb-logo');
+    const container = nav.querySelector('div > div'); // the inner flex container
+
+    let isSmall = false;
+    const onScroll = () => {
+      const s = window.scrollY || document.documentElement.scrollTop || 0;
+      const shouldShrink = s > 12; // threshold
+
+      if (shouldShrink && !isSmall) {
+        isSmall = true;
+        container.classList.remove('h-20');
+        container.classList.add('h-14');
+        logo.classList.remove('h-12');
+        logo.classList.add('h-9');
+        nav.classList.add('shadow-md');
+      } else if (!shouldShrink && isSmall) {
+        isSmall = false;
+        container.classList.remove('h-14');
+        container.classList.add('h-20');
+        logo.classList.remove('h-9');
+        logo.classList.add('h-12');
+        nav.classList.remove('shadow-md');
+      }
+    };
+
+    // smooth initial state
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) onScroll();
+    });
+    // run once on load
+    onScroll();
+  })();
 </script>
 
 </body>

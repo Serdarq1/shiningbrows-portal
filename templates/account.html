@@ -1,0 +1,88 @@
+{% include "base.html" %}
+{% include 'navbar.html' %}
+<div class="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col items-center pt-28 pb-20 px-4">
+
+  <!-- Profile Card -->
+  <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-gray-100 relative">
+    <!-- Gold badge -->
+    <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-md px-6 py-2">
+      <span class="gold-master-text text-xl">Master Trainer</span>
+    </div>
+
+    <div class="mt-8">
+      <img src="../static/assets/SERDAR AKOVA (1).png"
+           alt="Shining Brows"
+           class=" w-24 rounded-full mx-auto mb-4 shadow-sm" />
+
+      <h1 class="text-2xl font-bold text-gray-900 mb-1">
+        Hesap Detayların:
+      </h1>
+      <p class="text-gray-500 text-sm tracking-wide uppercase">{{ current_user.role }}</p>
+
+      {% if current_user.master %}
+      <div class="mt-6 text-left space-y-3">
+        <p class="text-gray-700">
+          <span class="font-semibold">Bölge:</span> {{ current_user.master.region | capitalize }}
+        </p>
+        <p class="text-gray-700">
+          <span class="font-semibold">Bu ayki öğrenci sayın:</span> {{ current_user.master.student_count }}
+        </p>
+        <p class="text-gray-700">
+          <span class="font-semibold">Toplam Öğrenci Sayın:</span> {{ current_user.master.total_students }}
+        </p>
+
+        {% set discount = 0 %}
+        {% if current_user.master.student_count >= 5 %}
+          {% set discount = 40 %}
+        {% elif current_user.master.student_count >= 3 %}
+          {% set discount = 20 %}
+        {% elif current_user.master.student_count >= 1 %}
+          {% set discount = 10 %}
+        {% endif %}
+
+        <p class="text-gray-700">
+          <span class="font-semibold">Ürün indirimin:</span>
+          <span class="text-green-600 font-bold">{{ discount }}%</span>
+        </p>
+      </div>
+      {% endif %}
+
+      <div class="mt-8">
+        <a href="{{ url_for('dashboard') }}"
+           class="inline-block bg-gray-900 text-white font-semibold px-6 py-2 rounded-full shadow-sm hover:-translate-y-0.5 hover:bg-black/90 transition-all duration-200">
+          Portala geri dön
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- gold text animation -->
+<style>
+.gold-master-text {
+  font-weight: 800;
+  background: linear-gradient(
+    90deg,
+    #f5e6b3,
+    #f0c75e,
+    #d4af37,
+    #f0c75e,
+    #f5e6b3
+  );
+  background-size: 300% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  animation: goldShimmer 3s linear infinite;
+  display: inline-block;
+}
+
+@keyframes goldShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+</style>

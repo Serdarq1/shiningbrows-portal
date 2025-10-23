@@ -1,28 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, Boolean, text, inspect
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from functools import wraps
 
+from datetime import datetime
 import unicodedata
 import os
-import json
-import requests
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "daşlfsöşlöw#>£#½!!"
-
-#Credentials
-admin_username = os.getenv('SHININGBROWS_USERNAME', 'admin')
-admin_password = os.getenv('SHININGBROWS_PASSWORD')
-admin_hashed = generate_password_hash(admin_password, salt_length=8)
-
-#Authorized
-authorized_username = os.getenv('SHININGBROWSADMIN', 'authorized')
-authorized_password = os.getenv('SHININGBROWSADMIN_PASSWORD')
-authorized_hashed = generate_password_hash(authorized_password, salt_length=8)
 
 #Login User
 login_manager = LoginManager()
@@ -55,21 +44,41 @@ class Masters(db.Model):
     color: Mapped[str] = mapped_column(String(250))
     total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0,server_default="0",)
 
-class User(UserMixin):
-    def __init__(self, role: str, name: str = "User"):
-        self.id = role
-        self.role = role
-        self.name = name
+class User(db.Model, UserMixin):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="master")
+    master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True)
+    master: Mapped["Masters"] = relationship("Masters", backref="users")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
-    if user_id in ("admin", "authorized"):
-        return User(role=user_id, name=user_id.title())
-    return None
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
+
+masters_data = [
+    ("Güzide Korkmaz", 3, "yeşil", "izmir"),
+    ("Dilek Ceyhan", 3, "yeşil", "ankara"),
+    ("Feride Özlem Gürkan", 0, "kırmızı", "adana"),
+    ("Azize Eren", 1, "sarı", "antalya"),
+    ("Esra Güldaş", 4, "yeşil", "aydın"),
+    ("Gözde Şenkal", 0, "sarı", "istanbul"),
+    ("Nurgül Civak", 0, "kırmızı", "zonguldak"),
+    ("Ebru Aydoğan", 2, "sarı", "balıkesir"),
+]
 
 with app.app_context():
     db.create_all()
 
+def compute_discount(monthly_students: int) -> int:
+    if monthly_students >= 5: return 40
+    if monthly_students >= 3: return 20
+    if monthly_students >= 1: return 10
+    return 0
 
 def _normalize_tr(s: str) -> str:
     if not s:
@@ -82,13 +91,6 @@ def _normalize_tr(s: str) -> str:
     # drop remaining combining marks (safeguard)
     s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
     return s.strip()
-
-def verify_login(username: str, password: str):
-    if username == admin_username and check_password_hash(admin_hashed, password):
-        return User(role="admin", name="Admin")
-    if username == authorized_username and check_password_hash(authorized_hashed, password):
-        return User(role="authorized", name="Authorized")
-    return None
 
 def roles_required(*roles):
     def deco(view):
@@ -103,7 +105,41 @@ def roles_required(*roles):
     return deco
 
 def admin_required(view):
-    return roles_required("admin")(view)
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != "admin":
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
+@app.get("/admin/users/new")
+@admin_required
+def new_user_form():
+    masters = db.session.scalars(db.select(Masters).order_by(Masters.name)).all()
+    return render_template("admin_new_user.html", masters=masters)
+
+@app.post("/admin/users")
+@admin_required
+def create_user():
+    email = request.form.get("email","").strip().lower()
+    password = request.form.get("password","")
+    master_id = request.form.get("master_id")
+
+    if not email or not password:
+        return "Email and password are required", 400
+    if db.session.scalar(db.select(User).where(User.email == email)):
+        return "Email already exists", 400
+
+    user = User(
+        email=email,
+        password_hash=generate_password_hash(password, salt_length=8),
+        role="master" if master_id else "admin",
+        master_id=int(master_id) if master_id else None
+    )
+    db.session.add(user)
+    db.session.commit()
+    return redirect(url_for("dashboard"))
 
 
 @app.route('/')
@@ -115,39 +151,70 @@ def login():
     if request.method == "GET":
         return render_template('./login.html')
 
-    username = request.form.get('username', '')
+    username = request.form.get('username', '').strip().lower()
     password = request.form.get('password', '')
 
-    user = verify_login(username, password)
-    if not user:
+    user = db.session.scalar(db.select(User).where(User.username == username))
+    if not user or not check_password_hash(user.password_hash, password):
         return render_template('./error.html')
-
     login_user(user)
-    next_url = request.args.get('next') or url_for('dashboard')
-    return redirect(next_url)
+    return redirect(request.args.get("next") or url_for("dashboard"))
+
+@app.route("/cikis")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
         
+# routes.py / main.py
+
+from flask_login import current_user
+
 @app.route('/portal')
-@roles_required("authorized", "admin")
 def dashboard():
     rows = db.session.scalars(db.select(Masters)).all()
     province_data = {
         _normalize_tr(r.region): {
             "name": r.name,
             "student_count": r.student_count,
-            "total_students": r.total_students,
-            "color": r.color
+            "color": r.color,
+            "total_students": getattr(r, "total_students", None),
         } for r in rows
     }
-    print(province_data)
-    return render_template('./dashboard.html', province_data=province_data)
+    can_edit = current_user.is_authenticated and getattr(current_user, "role", None) in ("admin",)
+
+    greeting_name = None
+    monthly_students = 0
+    discount = 0
+
+    total_month = sum(r.student_count for r in rows)
+    total_alltime = sum((r.total_ballots if False else r.total_students) for r in rows)
+
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "master":
+        master = current_user.master
+        if master:
+            greeting_name = master.name
+            monthly_students = master.student_count
+            discount = compute_discount(monthly_students)
+
+    return render_template(
+        "dashboard.html",
+        province_data=province_data,
+        can_edit=can_edit,
+        greeting_name=greeting_name,
+        monthly_students=monthly_students,
+        discount=discount,
+        total_month=total_month,
+        total_alltime=total_alltime,
+    )
 
 @app.get('/masters/new')
-@roles_required("authorized")
+@roles_required('admin')
 def master_form():
     return render_template('./master_form.html', form_mode="create", master=None)
 
 @app.post('/masters')
-@roles_required("authorized")
+@roles_required('admin')
 def save_master():
     name = request.form.get('name','').strip()
     region = request.form.get('region','').strip()
@@ -175,6 +242,11 @@ def save_master():
 
     db.session.commit()
     return redirect(url_for('dashboard'))
+
+@app.route("/account")
+@login_required
+def account():
+    return render_template("account.html")
 
 
 if __name__ == '__main__':

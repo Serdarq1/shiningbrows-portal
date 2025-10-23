@@ -6,3 +6,41 @@
 .leaflet-container .leaflet-interactive {
   -webkit-tap-highlight-color: transparent;
 }
+
+.gold-master-text {
+  font-weight: 800;
+  background: linear-gradient(
+    90deg,
+    #f5e6b3,
+    #f0c75e,
+    #d4af37,
+    #f0c75e,
+    #f5e6b3
+  );
+  background-size: 300% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  animation: goldShimmer 3s linear infinite;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.gold-master-text:hover {
+  transform: scale(1.05);
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
