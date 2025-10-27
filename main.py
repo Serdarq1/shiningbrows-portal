@@ -36,6 +36,15 @@ app.config["SQLALCHEMY_DATABASE_URI"] = get_db_uri()
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
+class Distributor(db.Model):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    country: Mapped[str] = mapped_column(String(120), nullable=False)
+    color: Mapped[str] = mapped_column(String(32), nullable=False, default="#2b6cb0")
+
+    user: Mapped["User"] = relationship("User", backref="distributor_profile")
+
 class Masters(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(250), nullable=False)
@@ -43,6 +52,7 @@ class Masters(db.Model):
     region: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String(250))
     total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0,server_default="0",)
+
 
 class User(db.Model, UserMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -53,6 +63,20 @@ class User(db.Model, UserMixin):
     master: Mapped["Masters"] = relationship("Masters", backref="users")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+class Product(db.Model):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+
+class Purchase(db.Model):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    distributor_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
+    product_id: Mapped[int] = mapped_column(ForeignKey("product.id"), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    distributor: Mapped["User"] = relationship("User", backref="purchases")
+    product: Mapped["Product"] = relationship("Product")
+
 @login_manager.user_loader
 def load_user(user_id):
     try:
@@ -60,25 +84,8 @@ def load_user(user_id):
     except (TypeError, ValueError):
         return None
 
-masters_data = [
-    ("Güzide Korkmaz", 3, "yeşil", "izmir"),
-    ("Dilek Ceyhan", 3, "yeşil", "ankara"),
-    ("Feride Özlem Gürkan", 0, "kırmızı", "adana"),
-    ("Azize Eren", 1, "sarı", "antalya"),
-    ("Esra Güldaş", 4, "yeşil", "aydın"),
-    ("Gözde Şenkal", 0, "sarı", "istanbul"),
-    ("Nurgül Civak", 0, "kırmızı", "zonguldak"),
-    ("Ebru Aydoğan", 2, "sarı", "balıkesir"),
-]
-
 with app.app_context():
     db.create_all()
-
-def compute_discount(monthly_students: int) -> int:
-    if monthly_students >= 5: return 40
-    if monthly_students >= 3: return 20
-    if monthly_students >= 1: return 10
-    return 0
 
 def _normalize_tr(s: str) -> str:
     if not s:
@@ -91,6 +98,12 @@ def _normalize_tr(s: str) -> str:
     # drop remaining combining marks (safeguard)
     s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
     return s.strip()
+
+def compute_discount(monthly_students: int) -> int:
+    if monthly_students >= 5: return 40
+    if monthly_students >= 3: return 20
+    if monthly_students >= 1: return 10
+    return 0
 
 def roles_required(*roles):
     def deco(view):
@@ -157,6 +170,13 @@ def login():
     user = db.session.scalar(db.select(User).where(User.username == username))
     if not user or not check_password_hash(user.password_hash, password):
         return render_template('./error.html')
+    
+    dist_user = db.session.scalar(db.select(User).where(User.role == "distributor").where(User.username == username))
+    if dist_user and check_password_hash(dist_user.password_hash, password):
+        login_user(dist_user)
+        return redirect(request.args.get("next") or url_for("distributor_home"))
+
+
     login_user(user)
     return redirect(request.args.get("next") or url_for("dashboard"))
 
@@ -164,13 +184,10 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("login"))
-        
-# routes.py / main.py
-
-from flask_login import current_user
+    return redirect(url_for("index"))
 
 @app.route('/portal')
+@login_required
 def dashboard():
     rows = db.session.scalars(db.select(Masters)).all()
     province_data = {
@@ -208,6 +225,82 @@ def dashboard():
         total_alltime=total_alltime,
     )
 
+@app.get("/distributor/portal")
+@login_required
+def distributor_home():
+    rows = db.session.scalars(db.select(Distributor)).all()
+    distributor_data = {
+        _normalize_tr(d.country): {"name": d.name, "color": d.color}
+        for d in rows
+    }
+
+    if current_user.role == "admin":
+        distributor_id = request.args.get("distributor_id", type=int)
+    else:
+        distributor_id = current_user.id  # distributors see their own
+
+    purchases_summary = []
+    if distributor_id:
+        purchases_summary = db.session.execute(
+            db.select(
+                Product.name.label("product"),
+                db.func.sum(Purchase.quantity).label("quantity")
+            )
+            .join(Purchase.product)
+            .where(Purchase.distributor_id == distributor_id)
+            .group_by(Product.name)
+            .order_by(Product.name)
+        ).all()
+
+    return render_template(
+        "distributor.html",
+        distributor_data=distributor_data,
+        purchases_summary=purchases_summary,
+    )
+
+
+@app.get("/admin/purchases/new")
+@admin_required
+def purchase_form():
+    distributors = db.session.scalars(
+        db.select(User).where(User.role == "distributor").order_by(User.username)
+    ).all()
+    products = db.session.scalars(
+        db.select(Product).order_by(Product.name)
+    ).all()
+    return render_template("admin_purchase_form.html", distributors=distributors, products=products)
+
+@app.post("/admin/purchases")
+@admin_required
+def create_purchase():
+    distributor_id = request.form.get("distributor_id")
+    product_id = request.form.get("product_id")
+    qty_raw = request.form.get("quantity", "0")
+
+    try:
+        distributor_id = int(distributor_id)
+        product_id = int(product_id)
+        quantity = int(qty_raw)
+    except (TypeError, ValueError):
+        return "Invalid input", 400
+
+    if quantity <= 0:
+        return "Quantity must be > 0", 400
+
+    # ensure distributor exists and is actually a distributor
+    distributor = db.session.get(User, distributor_id)
+    if not distributor or distributor.role != "distributor":
+        return "Invalid distributor", 400
+
+    product = db.session.get(Product, product_id)
+    if not product:
+        return "Invalid product", 400
+
+    db.session.add(Purchase(distributor_id=distributor_id, product_id=product_id, quantity=quantity))
+    db.session.commit()
+    return redirect(url_for("purchase_form"))
+
+
 @app.get('/masters/new')
 @roles_required('admin')
 def master_form():
@@ -244,6 +337,7 @@ def save_master():
     return redirect(url_for('dashboard'))
 
 @app.route("/account")
+@roles_required('master')
 @login_required
 def account():
     return render_template("account.html")

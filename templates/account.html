@@ -6,7 +6,11 @@
   <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-gray-100 relative">
     <!-- Gold badge -->
     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-md px-6 py-2">
-      <span class="gold-master-text text-xl">Master Trainer</span>
+      {% if current_user.is_authenticated and current_user.role == 'distributor' %}
+        <span class="gold-master-text text-xl">Distributor</span>
+      {% else %}
+        <span class="gold-master-text text-xl">Master Trainer</span>
+      {% endif %}
     </div>
 
     <div class="mt-8">
@@ -21,6 +25,9 @@
 
       {% if current_user.master %}
       <div class="mt-6 text-left space-y-3">
+        <p class="text-black font-bold text-lg">
+          {{ current_user.master.name | capitalize }}
+        </p>
         <p class="text-gray-700">
           <span class="font-semibold">Bölge:</span> {{ current_user.master.region | capitalize }}
         </p>

@@ -19,20 +19,19 @@
 </head>
 <body class="min-h-screen bg-gray-50">
 
-</div>
 {% include 'navbar.html' %}
   {% if greeting_name %}
-<div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
-  <h2 class="text-2xl font-semibold text-gray-800 font-thin">Hoşgeldin, <span class="italic font-bold">{{ greeting_name }}</span> 👋</h2>
+<div class="px-6 py-6 mb-6 text-left w-auto bg-white max-w-7xl mx-auto shadow rounded-2xl mt-8">
+  <h2 class=" text-2xl font-semibold text-gray-800 font-thin">Hoşgeldin, <span class="italic font-bold">{{ greeting_name }}</span> 👋
+  </h2>
   <p class="text-gray-600 mt-2">
     {% if monthly_students < 1 %}
       <p>Bu ay maalesef öğrencin yok.</p>
       Shining Brows ürünlerinde indirim alma hakkı için öğrenci bulman gerekiyor!
     {% else %}
-      Bu ay <strong class="text-black">{{ monthly_students }}</strong> öğrencin var.<br>
+      Bu ay toplam <strong class="text-black">{{ monthly_students }}</strong> öğrencin var.<br>
       Shining Brows ürünlerini <strong class="text-green-600">{{ discount }}%</strong> indirimle alabilirsin.
     {% endif %}
-    
   </p>
 {% elif current_user.is_authenticated and can_edit %}
 <div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
@@ -42,6 +41,7 @@
   </p>
 </div>
 {% endif %}
+</div>
 
 
   <!-- KPIs -->

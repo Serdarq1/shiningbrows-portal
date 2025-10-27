@@ -1,22 +1,17 @@
 {% include 'base.html' %}
 <header
   id="sb-navbar"
-  class="sticky top-0 z-50 transition-all duration-300"
+  class="sticky top-0 z-50 transition-all duration-300 bg-gray-200"
 >
   <div
-    class="mx-auto w-full border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 transition-all duration-300"
+    class="mx-auto w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 transition-all duration-300"
   >
     <div
       class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 h-20 transition-all duration-300"
     >
-      <!-- Left: Title -->
-      <a href="{{ url_for('dashboard') }}"
-         class="font-extrabold text-gray-900 text-lg sm:text-xl tracking-tight transition-all duration-300 hover:opacity-90">
-        Shining Brows — Portal
-      </a>
 
-      <!-- Center: Logo -->
-      <a href="{{ url_for('dashboard') }}"
+      <!-- Left: Logo -->
+      <a href="{{ url_for('index') }}"
          class="inline-flex items-center justify-center transition-transform duration-300 hover:scale-105">
         <img
           src="{{ url_for('static', filename='assets/SERDAR AKOVA (1).png') }}"
@@ -31,13 +26,27 @@
         <a href="{{ url_for('dashboard') }}"
            class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Portal</a>
 
+        {% if current_user.is_authenticated and (current_user.role == 'distributor' or current_user.role == 'admin') %}
+        <a href="{{ url_for('distributor_home') }}"
+           class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Distributor Portalı</a>
+        {% endif %}
+
+       {% if current_user.role == 'master' %}
         <a href="{{ url_for('account') }}"
-           class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Hesap</a>
+           class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Hesap</a>{%endif%}
+        {% if current_user.is_authenticated %}
+         <a href="{{ url_for('logout') }}"
+              class="inline-flex items-center rounded-full bg-pink-600 text-white px-4 py-2
+                      transition-all duration-200 hover:-translate-y-0.5 hover:bg-pink-400 shadow-sm w-24">
+              Çıkış Yap
+            </a>
+        {% else %}
           <a href="{{ url_for('login') }}"
-             class="inline-flex items-center rounded-full bg-gray-900 text-white px-4 py-2
-                    transition-all duration-200 hover:-translate-y-0.5 hover:bg-black/90 shadow-sm w-24">
-            Giriş Yap
-          </a>
+              class="inline-flex items-center rounded-full bg-pink-600 text-white px-4 py-2
+                      transition-all duration-200 hover:-translate-y-0.5 hover:bg-pink-400 shadow-sm w-24">
+              Giriş Yap
+            </a>
+        {% endif %}
       </nav>
     </div>
   </div>
