@@ -126,13 +126,13 @@ def admin_required(view):
     return wrapped
 
 
-@app.get("/admin/users/new")
+@app.get("/admin/kullanicilar/yeni")
 @admin_required
 def new_user_form():
     masters = db.session.scalars(db.select(Masters).order_by(Masters.name)).all()
     return render_template("admin_new_user.html", masters=masters)
 
-@app.post("/admin/users")
+@app.post("/admin/kullanicilar")
 @admin_required
 def create_user():
     email = request.form.get("email","").strip().lower()
@@ -252,14 +252,27 @@ def distributor_home():
             .order_by(Product.name)
         ).all()
 
+    total_purchases = db.session.execute(db.select(
+        Purchase.id,
+        User.username.label('distributor_name'),
+        Product.name.label('product_name'),
+        Purchase.quantity,
+        Purchase.created_at
+        ).join(User, Purchase.distributor_id == User.id)
+        .join(Product, Purchase.product_id == Product.id)
+        .order_by(Purchase.created_at.desc())
+        .limit(10)
+        ).all()
+
     return render_template(
         "distributor.html",
         distributor_data=distributor_data,
         purchases_summary=purchases_summary,
+        total_purchases=total_purchases
     )
 
 
-@app.get("/admin/purchases/new")
+@app.get("/admin/satin-alimlar/yeni")
 @admin_required
 def purchase_form():
     distributors = db.session.scalars(
@@ -270,7 +283,7 @@ def purchase_form():
     ).all()
     return render_template("admin_purchase_form.html", distributors=distributors, products=products)
 
-@app.post("/admin/purchases")
+@app.post("/admin/satin-alimlar")
 @admin_required
 def create_purchase():
     distributor_id = request.form.get("distributor_id")
@@ -287,7 +300,6 @@ def create_purchase():
     if quantity <= 0:
         return "Quantity must be > 0", 400
 
-    # ensure distributor exists and is actually a distributor
     distributor = db.session.get(User, distributor_id)
     if not distributor or distributor.role != "distributor":
         return "Invalid distributor", 400
@@ -301,7 +313,7 @@ def create_purchase():
     return redirect(url_for("purchase_form"))
 
 
-@app.get('/masters/new')
+@app.get('/masters/yeni-master')
 @roles_required('admin')
 def master_form():
     return render_template('./master_form.html', form_mode="create", master=None)
@@ -336,11 +348,120 @@ def save_master():
     db.session.commit()
     return redirect(url_for('dashboard'))
 
-@app.route("/account")
+@app.route("/hesap")
 @roles_required('master')
 @login_required
 def account():
     return render_template("account.html")
+
+@app.route("/admin/tum-satin-alimlar")
+@admin_required
+def all_purchases():
+    purchases = db.session.execute(
+        db.select(
+            Purchase.id,
+            User.username.label("distributor_name"),
+            Product.name.label("product_name"),
+            Purchase.quantity,
+            Purchase.created_at
+        )
+        .join(User, Purchase.distributor_id == User.id)
+        .join(Product, Purchase.product_id == Product.id)
+        .order_by(Purchase.created_at.desc())
+    ).all()
+
+    return render_template("admin_all_purchases.html", purchases=purchases)
+
+@app.get("/admin/distributors/new")
+@admin_required
+def new_distributor_form():
+    return render_template("admin_new_distributor.html")
+
+@app.post("/admin/distributors")
+@admin_required
+def create_distributor():
+    username = (request.form.get("username") or "").strip()
+    password = request.form.get("password") or ""
+    full_name = (request.form.get("full_name") or "").strip()
+    country = (request.form.get("country") or "").strip()
+    color = (request.form.get("color") or "#2b6cb0").strip()
+
+    if not (username and password and full_name and country):
+        return "Tüm alanların (kullanıcı adı, şifre, isim, ülke) doldurulması zorunludur.", 400
+
+    if db.session.scalar(db.select(User).where(User.username == username)):
+        return "Kullanıcı adı zaten var.", 400
+
+    user = User(
+        username=username,
+        password_hash=generate_password_hash(password, salt_length=8),
+        role="distributor",
+    )
+    db.session.add(user)
+    db.session.flush() 
+
+    dist = Distributor(
+        user_id=user.id,
+        name=full_name,
+        country=country, 
+        color=color or "#2b6cb0",
+    )
+    db.session.add(dist)
+    db.session.commit()
+
+    return redirect(url_for("distributor_home"))
+
+@app.get("/admin/masters/new")
+@admin_required
+def new_master_form():
+    return render_template("admin_new_master.html")
+
+@app.post("/admin/masters")
+@admin_required
+def create_master():
+    username = (request.form.get("username") or "").strip().lower()
+    password = request.form.get("password") or ""
+
+    full_name = (request.form.get("full_name") or "").strip()
+    region = (request.form.get("region") or "").strip()           
+    color = (request.form.get("color") or "#22c55e").strip()     
+
+    student_count_raw = request.form.get("student_count", "0")
+    total_students_raw = request.form.get("total_students", "0")
+
+    if not (username and password and full_name and region):
+        return "Tüm alanların doldurulması zorunludur.", 400
+    if db.session.scalar(db.select(User).where(User.username == username)):
+        return "Username already exists.", 400
+
+    try:
+        student_count = int(student_count_raw or 0)
+        total_students = int(total_students_raw or 0)
+    except ValueError:
+        return "Öğrenci sayısı rakam olmak zorundadır.", 400
+
+    master = Masters(
+        name=full_name,
+        region=region,
+        color=color,
+        student_count=student_count,
+        total_students=total_students,
+    )
+    db.session.add(master)
+    db.session.flush()  
+
+    user = User(
+        username=username,
+        password_hash=generate_password_hash(password, salt_length=8),
+        role="master",
+        master_id=master.id,
+    )
+    db.session.add(user)
+    db.session.commit()
+
+    return redirect(url_for("dashboard"))
+
+
 
 
 if __name__ == '__main__':

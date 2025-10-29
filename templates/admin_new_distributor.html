@@ -1,0 +1,66 @@
+{% include 'base.html' %}
+{% include 'navbar.html' %}
+
+<body class="min-h-screen bg-gray-50">
+  <div class="max-w-2xl mx-auto py-10 px-6">
+    <h1 class="text-2xl font-bold mb-6">Yeni Distributor Ekle</h1>
+
+    <form action="{{ url_for('create_distributor') }}" method="post"
+          class="bg-white rounded-2xl shadow p-6 space-y-5">
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Kullanıcı Adı</label>
+        <input name="username" type="text" required
+               placeholder="Örn. halilbiter"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+        <p class="text-xs text-gray-500 mt-1">
+          Oturum için kullanılacak (eşsiz). Birleşik ve küçük harfler ile kişinin adı ve soyadını yaz.
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Şifre</label>
+        <input name="password" type="password" required
+               class="w-full border border-gray-300 rounded-lg p-2" />
+                <p class="text-xs text-gray-500 mt-1">
+                Oturum için kullanılacak (eşsiz). Distributor için giriş şifresi belirle(not almayı unutma).
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Ad Soyad</label>
+        <input name="full_name" type="text" required
+               placeholder="Örn. Halil Biter"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Ülke</label>
+        <input name="country" type="text" required
+               placeholder="Örn. Netherlands"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+        <p class="text-xs text-gray-500 mt-1">
+          Dünya haritasında renklendirme için ülke adı İngilizce girilmeli.
+          (örn. <em>Netherlands</em>, <em>Cyprus</em>).
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Renk (opsiyonel)</label>
+        <input name="color" type="color" value="#2b6cb0"
+               class="h-10 w-16 p-0 border border-gray-300 rounded" />
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <a href="{{ url_for('distributor_home') }}"
+           class="rounded-lg px-4 py-2 border border-gray-200 hover:bg-gray-50 transition">
+          İptal
+        </a>
+        <button type="submit"
+                class="rounded-lg px-4 py-2 bg-pink-600 text-white hover:opacity-90 transition">
+          Kaydet
+        </button>
+      </div>
+    </form>
+  </div>
+</body>

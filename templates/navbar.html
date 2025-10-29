@@ -1,7 +1,7 @@
 {% include 'base.html' %}
 <header
   id="sb-navbar"
-  class="sticky top-0 z-50 transition-all duration-300 bg-gray-200"
+  class="sticky top-0 z-50 transition-all duration-300 bg-gray-50"
 >
   <div
     class="mx-auto w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 transition-all duration-300"
@@ -23,12 +23,19 @@
 
       <!-- Right: Links -->
       <nav class="flex items-center gap-4 sm:gap-6 text-sm font-medium">
+
+
         <a href="{{ url_for('dashboard') }}"
            class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Portal</a>
 
         {% if current_user.is_authenticated and (current_user.role == 'distributor' or current_user.role == 'admin') %}
         <a href="{{ url_for('distributor_home') }}"
            class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Distributor Portalı</a>
+        {% endif %}
+
+         {% if current_user.is_authenticated and (current_user.role == 'admin') %}
+        <a href="{{ url_for('all_purchases') }}"
+           class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Tüm Satın Alımlar</a>
         {% endif %}
 
        {% if current_user.role == 'master' %}

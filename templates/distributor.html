@@ -14,6 +14,24 @@
 </head>
 <body class="min-h-screen bg-gray-50">
  {% include 'navbar.html' %}
+
+ {% if current_user.is_authenticated and current_user.role == 'admin' %}
+<div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
+  <h2 class="text-2xl font-semibold text-gray-800">Hoşgeldin, Güzide Korkmaz 👋</h2>
+  <p class="text-gray-600 mt-2">
+    Master bilgilerini güncellemek için "+" ikonuna tıkla. Yeni bir master veya distributor eklemek için ise aşağıdaki linklere tıkla.👇
+    <div class="mt-4">
+        <a href="{{ url_for('new_master_form') }}"
+          class="text-sm font-semibold hover:opacity-80 transition bg-pink-600 px-3 py-2 rounded-xl transition hover:opacity-50 text-white mr-2">
+          + Yeni Master
+        </a>
+        <a href="{{ url_for('new_distributor_form') }}"
+          class="text-sm font-semibold hover:opacity-80 transition bg-pink-600 px-3 py-2 rounded-xl transition hover:opacity-50 text-white mr-2">
+          + Yeni Distributor
+        </a></div>
+  </p>
+</div>
+{% endif %}
   
   <div class="flex flex-col gap-6 lg:flex-row ml-12 mr-12 mt-12">
   <main class="flex-1">
@@ -22,7 +40,8 @@
     </div>
   </main>
   
-  <aside class="bg-white rounded-2xl shadow p-6 w-full lg:w-1/3 bg-white rounded-2xl shadow p-6">
+  {% if current_user.is_authenticated and current_user.role == 'distributor' %}
+    <aside class="bg-white rounded-2xl shadow p-6 w-full lg:w-1/3 bg-white rounded-2xl shadow p-6">
       <h3 class="text-lg font-bold text-gray-900">Satın almış olduğun ürünler</h3>
       {% if purchases_summary and purchases_summary|length > 0 %}
         <ul class="mt-4 divide-y">
@@ -36,7 +55,24 @@
       {% else %}
         <p class="mt-4 text-sm text-gray-600">Henüz ürün satın almadın.</p>
       {% endif %}
-      {% if current_user.is_authenticated and current_user.role in ['admin'] %}
+    </aside>
+  {% endif %}
+
+    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+    <aside class="bg-white rounded-2xl shadow p-6 w-full lg:w-1/3 bg-white rounded-2xl shadow p-6">
+      <h3 class="text-lg font-bold text-gray-900">Son Satın Alımlar</h3>
+      {% if total_purchases and total_purchases|length > 0 %}
+        <ul class="mt-4 divide-y">
+          {% for row in total_purchases %}
+            <li class="py-3 flex items-center justify-between">
+              <span class="text-gray-800">{{ row.distributor_name.title() }}</span>
+              <span class="text-gray-800">{{ row.product_name.title() }}</span>
+              <span class="text-gray-900 font-semibold">{{ row.quantity }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+      <p class="mt-4 text-sm text-gray-600">Henüz ürün satın almadın.</p>
       <a href="{{ url_for('purchase_form') }}"
          class="inline-flex items-center justify-center mt-6 w-full rounded-xl border px-4 py-2 text-sm font-semibold
                 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition">
@@ -44,8 +80,25 @@
       </a>
       {% endif %}
     </aside>
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+<a
+  href="{{url_for('new_distributor_form')}}"
+  class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-700 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-pink-300 shadow-lg flex items-center justify-center"
+  aria-label="Yeni/Ekle"
+  title="Yeni/Ekle"
+>
+  <!-- plus icon -->
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+  </svg>
+</a>
+{% endif %}
     
   </div>
+
+  {% include 'footer.html' %}
 
   <script>
     const DISTRIBUTOR_DATA = {{ distributor_data|tojson }};

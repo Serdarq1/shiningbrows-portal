@@ -37,7 +37,16 @@
 <div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
   <h2 class="text-2xl font-semibold text-gray-800">Hoşgeldin, Güzide Korkmaz 👋</h2>
   <p class="text-gray-600 mt-2">
-    "+" ikonundan bilgileri güncelleyebilirsin.
+    Master bilgilerini güncellemek için "+" ikonuna tıkla. Yeni bir master veya distributor eklemek için ise aşağıdaki linklere tıkla.👇
+    <div class="mt-4">
+        <a href="{{ url_for('new_master_form') }}"
+          class="text-sm font-semibold hover:opacity-80 transition bg-pink-600 px-3 py-2 rounded-xl transition hover:opacity-50 text-white mr-2">
+          + Yeni Master
+        </a>
+        <a href="{{ url_for('new_distributor_form') }}"
+          class="text-sm font-semibold hover:opacity-80 transition bg-pink-600 px-3 py-2 rounded-xl transition hover:opacity-50 text-white mr-2">
+          + Yeni Distributor
+        </a></div>
   </p>
 </div>
 {% endif %}
