@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime
+from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime, update
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from functools import wraps
@@ -135,7 +135,7 @@ def new_user_form():
 @app.post("/admin/kullanicilar")
 @admin_required
 def create_user():
-    email = request.form.get("email","").strip().lower()
+    email = request.form.get("email","")
     password = request.form.get("password","")
     master_id = request.form.get("master_id")
 
@@ -164,21 +164,31 @@ def login():
     if request.method == "GET":
         return render_template('./login.html')
 
-    username = request.form.get('username', '').strip().lower()
-    password = request.form.get('password', '')
+    # Normalize ONLY the username
+    username = (request.form.get('username', '') or '')
+    # Keep the password exactly as typed
+    password = (request.form.get('password', '') or '')
 
+    # Single lookup
     user = db.session.scalar(db.select(User).where(User.username == username))
     if not user or not check_password_hash(user.password_hash, password):
-        return render_template('./error.html')
-    
-    dist_user = db.session.scalar(db.select(User).where(User.role == "distributor").where(User.username == username))
-    if dist_user and check_password_hash(dist_user.password_hash, password):
-        login_user(dist_user)
-        return redirect(request.args.get("next") or url_for("distributor_home"))
-
+        # Optional: flash a message here
+        return render_template('./error.html'), 401
 
     login_user(user)
-    return redirect(request.args.get("next") or url_for("dashboard"))
+
+    # Route based on role
+    next_url = request.args.get("next")
+    if user.role == "distributor":
+        return redirect(next_url or url_for("distributor_home"))
+    elif user.role == "admin":
+        return redirect(next_url or url_for("dashboard"))
+    elif user.role == "master":
+        return redirect(next_url or url_for("dashboard"))
+    else:
+        # Fallback if an unknown role is stored
+        return redirect(url_for("index"))
+
 
 @app.route("/cikis")
 @login_required
@@ -460,8 +470,6 @@ def create_master():
     db.session.commit()
 
     return redirect(url_for("dashboard"))
-
-
 
 
 if __name__ == '__main__':
