@@ -23,7 +23,7 @@
 <body class="min-h-screen bg-gray-50">
 
 {% include 'navbar.html' %}
-
+{% include 'sale.html' %}
 {% if greeting_name %}
 <div class="px-6 py-6 mb-6 text-left w-auto bg-white max-w-7xl mx-auto shadow rounded-2xl mt-8">
   <h2 class=" text-2xl font-semibold text-gray-800 font-thin">
@@ -38,6 +38,12 @@
       Shining Brows ürünlerini <strong class="text-green-600">{{ discount }}%</strong> indirimle alabilirsin.
     {% endif %}
   </p>
+    <p class="mt-8"><span class="font-bold">Sözleşme başlama tarihi: </span> {{contract_date.day}}/{{contract_date.month}}/{{contract_date.year}} </p>
+     <p><span class="font-bold">Sözleşme bitiş tarihi: </span> {{contract_end.day}}/{{contract_end.month}}/{{contract_end.year}} </p>
+     {% if now > contract_end %}
+     <p class="text-red-600 font-bold mt-2">Sözleşme tarihiniz geçmiştir. Lütfen sözleşmenizi yenileyiniz. </p>
+     {% endif %}
+
 </div>
 {% elif current_user.is_authenticated and can_edit %}
 <div class="bg-white shadow rounded-xl p-5 mb-6 text-center max-w-7xl mx-auto mt-8">
@@ -159,18 +165,18 @@
       </div>
 
       <div class="text-gray-800 text-sm font-bold mt-8">
-        <p>Bu ayki toplam öğrenci sayısı: {{ total_month }}</p>
-        <p>Toplam Shining Brows Uzman Sayısı: {{ total_alltime }}</p>
+        <p class="bg-pink-600 px-2 py-2 text-white rounded-2xl font-medium">Bu ayki toplam öğrenci sayısı: {{ total_month }}</p>
+        <p class="bg-pink-600 px-2 py-2 text-white rounded-2xl font-medium mt-4">Toplam Shining Brows Uzman Sayısı: {{ total_alltime }}</p>
       </div>
     </aside>
 
-    <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
+     <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
       <div class="text-2xl font-bold">
         <div>
-          <p class="text-red-800 text-sm">Kırmızı Bölge:</p>
+          <p class="text-green-600 text-sm">Yeşil Bölge:</p>
           <p class="text-sm font-medium">
-            Aynı ay içerisinde hiç eğitim veremeyen Masterlar.
-            Ürün alımlarında indirim uygulanmaz.
+            Aynı ay içerisinde minimum 5 öğrenciye eğitim vermiş Masterlar.
+            Ürün alımlarında %40 indirim uygulanır.
           </p>
         </div>
       </div>
@@ -191,10 +197,22 @@
     <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
       <div class="text-2xl font-bold">
         <div>
-          <p class="text-green-600 text-sm">Yeşil Bölge:</p>
+          <p class="text-orange-600 text-sm">Turuncu Bölge:</p>
           <p class="text-sm font-medium">
-            Aynı ay içerisinde minimum 5 öğrenciye eğitim vermiş Masterlar.
-            Ürün alımlarında %40 indirim uygulanır.
+            Aynı ay içerisinde minimum 1 öğrenciye eğitim vermiş Masterlar.
+            Ürün alımlarında %10 indirim uygulanır.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-4 text-gray-500">
+      <div class="text-2xl font-bold">
+        <div>
+          <p class="text-red-800 text-sm">Kırmızı Bölge:</p>
+          <p class="text-sm font-medium">
+            Aynı ay içerisinde hiç eğitim veremeyen Masterlar.
+            Ürün alımlarında indirim uygulanmaz.
           </p>
         </div>
       </div>
@@ -207,8 +225,7 @@
       <div>
         <p class="text-gray-800 text-sm">Not:</p>
         <p class="text-sm font-medium">
-          Bir ayda 1 veya 2 öğrenciye eğitim vermiş olan uzmanlar %10 indirimden yararlanabilir.
-          Aynı zamanda 6 ay üst üste yeşil bölgede olan her uzman için
+          6 ay üst üste yeşil bölgede olan her uzman için
           <span class="gold-master-text">Gold Master</span> logosu hazırlanır.
         </p>
       </div>

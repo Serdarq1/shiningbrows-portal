@@ -100,11 +100,18 @@
           <option value="">Renk seç...</option>
           <option value="yeşil">Yeşil</option>
           <option value="sarı">Sarı</option>
+           <option value="turuncu">Turuncu</option>
           <option value="kırmızı">Kırmızı</option>
         </select>
         <p class="text-[11px] text-gray-500 mt-1">
           Haritadaki renklendirme bu değere göre yapılıyor.
         </p>
+
+        <div class="mt-4">
+          <label class="block text-sm text-gray-600 mb-1">Sözleşme Tarihi</label>
+          <input name="contract_date" type="date" class="w-full border rounded-lg px-3 py-2"
+                value="{{ master.contract_date.strftime('%Y-%m-%d') if master and master.contract_date else '' }}">
+          </div>
       </div>
 
       <!-- Actions -->

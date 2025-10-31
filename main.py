@@ -42,8 +42,14 @@ class Distributor(db.Model):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     country: Mapped[str] = mapped_column(String(120), nullable=False)
     color: Mapped[str] = mapped_column(String(32), nullable=False, default="#2b6cb0")
+    contract_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    user: Mapped["User"] = relationship("User", backref="distributor_profile")
+    user: Mapped["User"] = relationship(
+        "User",
+        backref=db.backref("distributor_profile", uselist=False),
+        uselist=False
+    )
+
 
 class Masters(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -51,8 +57,8 @@ class Masters(db.Model):
     student_count: Mapped[int] = mapped_column(Integer, nullable=False)
     region: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String(250))
-    total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0,server_default="0",)
-
+    total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0,server_default="0")
+    contract_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   
 
 class User(db.Model, UserMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -217,10 +223,16 @@ def dashboard():
     total_month = sum(r.student_count for r in rows)
     total_alltime = sum((r.total_ballots if False else r.total_students) for r in rows)
 
+    contract_date = None
+    contract_end = None
+    now = datetime.now()
+
     if current_user.is_authenticated and getattr(current_user, "role", None) == "master":
         master = current_user.master
         if master:
             greeting_name = master.name
+            contract_date = master.contract_date
+            contract_end = master.contract_date.replace(year=master.contract_date.year + 1)
             monthly_students = master.student_count
             discount = compute_discount(monthly_students)
 
@@ -233,21 +245,42 @@ def dashboard():
         discount=discount,
         total_month=total_month,
         total_alltime=total_alltime,
+        contract_date=contract_date,
+        contract_end=contract_end,
+        now=now
     )
 
 @app.get("/distributor/portal")
 @login_required
 def distributor_home():
     rows = db.session.scalars(db.select(Distributor)).all()
+    now = datetime.now()
     distributor_data = {
-        _normalize_tr(d.country): {"name": d.name, "color": d.color}
+        _normalize_tr(d.country): {
+            "name": d.name,
+            "color": d.color,
+            "contract_date": d.contract_date.strftime("%Y-%m-%d") if d.contract_date else None,
+        }
         for d in rows
     }
 
+   
     if current_user.role == "admin":
         distributor_id = request.args.get("distributor_id", type=int)
     else:
-        distributor_id = current_user.id  # distributors see their own
+        distributor_id = current_user.id 
+
+   
+    distributor_name = None
+    distributor_contract_date = None
+    distributor_contract_date_end = None
+    distributor_region = None
+
+    if current_user.role == "distributor" and current_user.distributor_profile:
+        distributor_name = current_user.distributor_profile.name
+        distributor_contract_date = current_user.distributor_profile.contract_date
+        distributor_region = current_user.distributor_profile.country
+        distributor_contract_date_end = current_user.distributor_profile.contract_date.replace(year=current_user.distributor_profile.contract_date.year + 1)
 
     purchases_summary = []
     if distributor_id:
@@ -262,23 +295,31 @@ def distributor_home():
             .order_by(Product.name)
         ).all()
 
-    total_purchases = db.session.execute(db.select(
-        Purchase.id,
-        User.username.label('distributor_name'),
-        Product.name.label('product_name'),
-        Purchase.quantity,
-        Purchase.created_at
-        ).join(User, Purchase.distributor_id == User.id)
+    total_purchases = db.session.execute(
+        db.select(
+            Purchase.id,
+            User.username.label('distributor_name'),
+            Product.name.label('product_name'),
+            Purchase.quantity,
+            Purchase.created_at
+        )
+        .join(User, Purchase.distributor_id == User.id)
         .join(Product, Purchase.product_id == Product.id)
         .order_by(Purchase.created_at.desc())
         .limit(10)
-        ).all()
+    ).all()
 
     return render_template(
         "distributor.html",
         distributor_data=distributor_data,
         purchases_summary=purchases_summary,
-        total_purchases=total_purchases
+        total_purchases=total_purchases,
+        distributor_contract_date=distributor_contract_date,
+        distributor_contract_date_end=distributor_contract_date_end,
+        distributor_name=distributor_name,
+        distributor_id=distributor_id,
+        distributor_region=distributor_region,
+        now=now
     )
 
 

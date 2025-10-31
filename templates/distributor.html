@@ -14,6 +14,7 @@
 </head>
 <body class="min-h-screen bg-gray-50">
  {% include 'navbar.html' %}
+ {% include 'sale.html' %}
 
  {% if current_user.is_authenticated and current_user.role == 'admin' %}
 <div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
@@ -32,6 +33,22 @@
   </p>
 </div>
 {% endif %}
+
+{% if distributor_name and distributor_contract_date %}
+<div class="px-6 py-6 mb-6 text-left w-auto bg-white max-w-7xl mx-auto shadow rounded-2xl mt-8">
+  <h2 class=" text-2xl font-semibold text-gray-800 font-thin">
+    Hoşgeldin, <span class="italic font-bold">{{ distributor_name }}</span> 👋
+  </h2>
+
+  <p class="mt-2">Bölge: <span class="font-bold">{{distributor_region}} </span> </p>
+    <p class="mt-4"><span class="font-bold">Sözleşme başlama tarihi: </span> {{distributor_contract_date.day}}/{{distributor_contract_date.month}}/{{distributor_contract_date.year}} </p>
+     <p><span class="font-bold">Sözleşme bitiş tarihi: </span> {{distributor_contract_date_end.day}}/{{distributor_contract_date_end.month}}/{{distributor_contract_date_end.year}} </p>
+     {% if now > distributor_contract_date_end %}
+     <p class="text-red-600 font-bold mt-2">Sözleşme tarihiniz geçmiştir. Lütfen sözleşmenizi yenileyiniz. </p>
+     {% endif %}
+     {%endif%}
+</div>
+
   
   <div class="flex flex-col gap-6 lg:flex-row ml-12 mr-12 mt-12">
   <main class="flex-1">
