@@ -2,41 +2,125 @@
 {% include 'navbar.html' %}
 <body class="min-h-screen bg-gray-50">
   <div class="max-w-xl mx-auto py-10 px-6">
-    <h1 class="text-2xl font-bold mb-6">Satın Alım Kaydet</h1>
+    <h1 class="text-2xl font-bold mb-6">Yeni Bir Satın Alım Kaydet</h1>
 
-    <form action="{{ url_for('create_purchase') }}" method="post" class="bg-white rounded-2xl shadow p-6 space-y-4">
+    <form action="{{ url_for('create_purchase') }}" method="post"
+          class="bg-white rounded-2xl shadow p-6 space-y-6" id="purchaseForm">
+
+      <!-- Distributor select -->
       <div>
-        <label class="block text-sm text-gray-600 mb-1">Distributor</label>
-        <select name="distributor_id" class="w-100 border border-gray-600 rounded-lg p-2" required>
-          <option value="" disabled selected>Distributor</option>
+        <label class="block text-sm text-gray-600 mb-1 font-medium">Distributor</label>
+        <select name="distributor_id"
+                class="w-full border border-gray-600 rounded-lg p-2"
+                required>
+          <option value="" disabled selected>Distributor Seç</option>
           {% for u in distributors %}
             <option value="{{ u.id }}">{{ u.username.title() }}</option>
           {% endfor %}
         </select>
       </div>
 
-      <div>
-        <label class="block text-sm text-gray-600 mb-1">Ürün</label>
-        <select name="product_id" class="w-full border border-gray-600 rounded-lg p-2" required>
-          <option value="" disabled selected>Ürün Seç</option>
-          {% for p in products %}
-            <option value="{{ p.id }}">{{ p.name.title() }}</option>
-          {% endfor %}
-        </select>
+      <!-- Product rows wrapper -->
+      <div class="space-y-4" id="productRows">
+        <!-- ONE row template to start -->
+        <div class="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4 product-row">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-600 mb-1">Ürün</label>
+            <select name="product_id[]"
+                    class="w-full border border-gray-600 rounded-lg p-2"
+                    required>
+              <option value="" disabled selected>Ürün Seç</option>
+              {% for p in products %}
+                <option value="{{ p.id }}">{{ p.name.title() }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="w-24">
+            <label class="block text-xs text-gray-600 mb-1">Adet</label>
+            <input name="quantity[]"
+                   type="number"
+                   min="1"
+                   step="1"
+                   class="w-full border border-gray-600 rounded-lg p-2"
+                   required />
+          </div>
+
+          <button type="button"
+                  class="shrink-0 text-xs text-red-600 font-medium hover:underline mt-6 remove-row-btn">
+            Sil
+          </button>
+        </div>
       </div>
 
-      <div>
-        <label class="block text-sm text-gray-600 mb-1">Adet</label>
-        <input name="quantity" type="number" min="1" step="1" class="w-full border rounded-lg p-2" required />
-      </div>
+      <!-- Add product row button -->
+      <div class="flex justify-between items-center">
+        <button id="addRowBtn"
+                type="button"
+                class="inline-flex items-center text-sm font-semibold text-pink-600 hover:text-pink-700 transition cursor-pointer">
+          <span class="text-lg leading-none mr-1">＋</span>
+          Yeni Ürün Ekle
+        </button>
 
-      <div class="flex justify-end">
-        <button type="submit" class="rounded-lg px-4 py-2 bg-pink-600 text-white hover:opacity-90 transition cursor-pointer">Kaydet</button>
+        <button type="submit"
+                class="rounded-lg px-4 py-2 bg-pink-600 text-white hover:opacity-90 transition cursor-pointer">
+          Kaydet
+        </button>
       </div>
     </form>
 
     <div class="mt-8">
-      <a href="{{ url_for('all_purchases') }}" class="text-sm text-white bg-pink-600 p-2 py-3 rounded-lg shadow shadow-sm ">&larr; Geri Dön</a>
+      <a href="{{ url_for('all_purchases') }}"
+         class="inline-block text-sm text-white bg-pink-600 px-3 py-2 rounded-lg shadow">
+        &larr; Geri Dön
+      </a>
     </div>
   </div>
+
+  <script>
+    // We'll clone this HTML for each new row.
+    const rowTemplate = `
+      <div class="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4 product-row">
+        <div class="flex-1">
+          <label class="block text-xs text-gray-600 mb-1">Ürün</label>
+          <select name="product_id[]" class="w-full border border-gray-600 rounded-lg p-2" required>
+            <option value="" disabled selected>Ürün Seç</option>
+            {% for p in products %}
+              <option value="{{ p.id }}">{{ p.name.title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="w-24">
+          <label class="block text-xs text-gray-600 mb-1">Adet</label>
+          <input name="quantity[]" type="number" min="1" step="1"
+                 class="w-full border border-gray-600 rounded-lg p-2" required />
+        </div>
+
+        <button type="button"
+                class="shrink-0 text-xs text-red-600 font-medium hover:underline mt-6 remove-row-btn">
+          Sil
+        </button>
+      </div>
+    `;
+
+    const productRows = document.getElementById('productRows');
+    const addRowBtn = document.getElementById('addRowBtn');
+
+    // add new row
+    addRowBtn.addEventListener('click', () => {
+      productRows.insertAdjacentHTML('beforeend', rowTemplate);
+    });
+
+    // event delegation for removing a row
+    productRows.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-row-btn')) {
+        const row = e.target.closest('.product-row');
+        // Only remove if there's more than 1 row, so we always keep at least one
+        if (document.querySelectorAll('.product-row').length > 1) {
+          row.remove();
+        }
+      }
+    });
+  </script>
 </body>

@@ -47,10 +47,12 @@
           {% set discount = 10 %}
         {% endif %}
 
+        {% if current_user.role == 'master' %}
         <p class="text-gray-700">
           <span class="font-semibold">Ürün indirimin:</span>
           <span class="text-green-600 font-bold">{{ discount }}%</span>
         </p>
+        {% endif %}
       </div>
       {% endif %}
 

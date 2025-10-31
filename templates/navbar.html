@@ -38,7 +38,7 @@
            class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Tüm Satın Alımlar</a>
         {% endif %}
 
-       {% if current_user.role == 'master' %}
+       {% if current_user.role == 'master' or current_user.role == 'admin' %}
         <a href="{{ url_for('account') }}"
            class="text-gray-700 hover:text-gray-900 transition-colors duration-200">Hesap</a>{%endif%}
         {% if current_user.is_authenticated %}

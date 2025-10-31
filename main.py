@@ -293,40 +293,57 @@ def purchase_form():
     ).all()
     return render_template("admin_purchase_form.html", distributors=distributors, products=products)
 
-@app.post("/admin/satin-alimlar")
+@app.post("/admin/purchases")
 @admin_required
 def create_purchase():
-    distributor_id = request.form.get("distributor_id")
-    product_id = request.form.get("product_id")
-    qty_raw = request.form.get("quantity", "0")
+    distributor_id_raw = request.form.get("distributor_id")
+    product_ids = request.form.getlist("product_id[]")
+    quantities = request.form.getlist("quantity[]")
 
     try:
-        distributor_id = int(distributor_id)
-        product_id = int(product_id)
-        quantity = int(qty_raw)
+        distributor_id = int(distributor_id_raw)
     except (TypeError, ValueError):
-        return "Invalid input", 400
-
-    if quantity <= 0:
-        return "Quantity must be > 0", 400
+        return "Invalid distributor", 400
 
     distributor = db.session.get(User, distributor_id)
     if not distributor or distributor.role != "distributor":
         return "Invalid distributor", 400
 
-    product = db.session.get(Product, product_id)
-    if not product:
-        return "Invalid product", 400
+    for prod_id_raw, qty_raw in zip(product_ids, quantities):
+        try:
+            prod_id = int(prod_id_raw)
+            qty = int(qty_raw)
+        except (TypeError, ValueError):
+            continue
 
-    db.session.add(Purchase(distributor_id=distributor_id, product_id=product_id, quantity=quantity))
+        if qty <= 0:
+            continue
+
+        product = db.session.get(Product, prod_id)
+        if not product:
+            continue
+
+        db.session.add(Purchase(
+            distributor_id=distributor_id,
+            product_id=prod_id,
+            quantity=qty
+        ))
+
     db.session.commit()
-    return redirect(url_for("purchase_form"))
+
+    return redirect(url_for("all_purchases"))
 
 
-@app.get('/masters/yeni-master')
-@roles_required('admin')
-def master_form():
-    return render_template('./master_form.html', form_mode="create", master=None)
+
+@app.get("/masters/duzenle")
+@roles_required("admin")
+def master_edit_form():
+    masters = db.session.scalars(db.select(Masters).order_by(Masters.name)).all()
+    return render_template(
+        "master_form.html",
+        masters=masters
+    )
+
 
 @app.post('/masters')
 @roles_required('admin')
@@ -359,7 +376,7 @@ def save_master():
     return redirect(url_for('dashboard'))
 
 @app.route("/hesap")
-@roles_required('master')
+@roles_required('master', 'admin')
 @login_required
 def account():
     return render_template("account.html")
@@ -421,7 +438,7 @@ def create_distributor():
 
     return redirect(url_for("distributor_home"))
 
-@app.get("/admin/masters/new")
+@app.get("/admin/masters/yeni-master")
 @admin_required
 def new_master_form():
     return render_template("admin_new_master.html")
@@ -470,6 +487,22 @@ def create_master():
     db.session.commit()
 
     return redirect(url_for("dashboard"))
+
+
+@app.post("/admin/reset-data")
+@admin_required
+def reset_data():
+    masters = db.session.scalars(db.select(Masters)).all()
+    for m in masters:
+        m.student_count = 0
+        m.total_students = 0
+
+    db.session.execute(db.delete(Purchase))
+
+    db.session.commit()
+
+    return "Tüm öğrenci sayıları ve satın alımlar sıfırlanmıştır.", 200
+
 
 
 if __name__ == '__main__':

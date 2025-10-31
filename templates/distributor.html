@@ -19,7 +19,7 @@
 <div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
   <h2 class="text-2xl font-semibold text-gray-800">Hoşgeldin, Güzide Korkmaz 👋</h2>
   <p class="text-gray-600 mt-2">
-    Master bilgilerini güncellemek için "+" ikonuna tıkla. Yeni bir master veya distributor eklemek için ise aşağıdaki linklere tıkla.👇
+    Distributor satış bilgilerini güncellemek için sağ alttaki "+" ikonuna tıkla. Yeni bir master veya distributor eklemek için ise aşağıdaki linklere tıkla.👇
     <div class="mt-4">
         <a href="{{ url_for('new_master_form') }}"
           class="text-sm font-semibold hover:opacity-80 transition bg-pink-600 px-3 py-2 rounded-xl transition hover:opacity-50 text-white mr-2">
@@ -84,7 +84,7 @@
 
     {% if current_user.is_authenticated and current_user.role == 'admin' %}
 <a
-  href="{{url_for('new_distributor_form')}}"
+  href="{{url_for('purchase_form')}}"
   class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-700 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-pink-300 shadow-lg flex items-center justify-center"
   aria-label="Yeni/Ekle"
   title="Yeni/Ekle"

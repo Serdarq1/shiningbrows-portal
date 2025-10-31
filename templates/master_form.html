@@ -1,49 +1,178 @@
 {% include 'base.html' %}
 <body class="min-h-screen bg-gray-50">
-    <header class="w-full border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">Shining Brows — Master Düzenle</h1>
-        <nav class="flex items-center gap-4 text-sm">
-        <a href="{{url_for('index')}}"> <img src="../static/assets/SERDAR AKOVA (1).png"  class="w-24"/></a>
-        </nav>
-        </div>
+  <header class="w-full border-b border-gray-200 bg-white sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">
+        Shining Brows — Master Yönetimi
+      </h1>
+      <nav class="flex items-center gap-4 text-sm">
+        <a href="{{ url_for('index') }}">
+          <img src="{{ url_for('static', filename='assets/SERDAR AKOVA (1).png') }}" class="w-24" />
+        </a>
+      </nav>
+    </div>
   </header>
-  <div class="max-w-xl mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-6">Master Düzenle</h1>
 
-    <form method="POST" action="{{ url_for('save_master') }}" class="bg-white p-6 rounded-2xl shadow space-y-4">
+  <main class="max-w-xl mx-auto p-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Master Düzenle</h2>
+    <p class="text-sm text-gray-500 mb-6">
+      Bir master seç, değerleri güncelle ve <strong>Kaydet</strong>'e bas.
+    </p>
+
+    <form method="POST"
+          action="{{ url_for('save_master') }}"
+          class="bg-white p-6 rounded-2xl shadow space-y-6 border border-gray-100"
+          id="masterForm">
+
+      <!-- Master Select -->
       <div>
-        <label class="block text-sm text-gray-600 mb-1">Ad Soyad</label>
-        <input name="name" required class="w-full border rounded-lg px-3 py-2" value="{{ master.name if master else '' }}">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Master Seç</label>
+        <select id="masterSelect"
+                class="w-full border rounded-lg px-3 py-2 text-gray-900"
+                required>
+          <option value="" disabled selected>Bir master seç...</option>
+          {% for m in masters %}
+            <option value="{{ m.region|e }}">{{ m.name }} ({{ m.region|title }})</option>
+          {% endfor %}
+        </select>
+        <p class="text-[11px] text-gray-500 mt-1">
+          Seçtikten sonra aşağıdaki alanlar otomatik doldurulacak.
+        </p>
       </div>
 
-      <div>
-        <label class="block text-sm text-gray-600 mb-1">Şehir (region)</label>
-        <input name="region" required class="w-full border rounded-lg px-3 py-2" placeholder="İzmir, Ankara, ..." value="{{ master.region if master else '' }}">
-        <p class="text-xs text-gray-500 mt-1">* Veritabanında <strong>region</strong> alanı benzersizdir.</p>
-      </div>
+      <!-- Hidden real inputs that will be submitted -->
+      <input type="hidden" name="name" id="fieldName">
+      <input type="hidden" name="region" id="fieldRegion">
 
-      <div class="grid grid-cols-2 gap-4">
+      <!-- Display-only name & region preview -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Aylık Öğrenci Sayısı</label>
-          <input name="student_count" type="number" min="0" class="w-full border rounded-lg px-3 py-2" value="{{ master.student_count if master else 0 }}">
+          <label class="block text-sm text-gray-600 mb-1">Ad Soyad</label>
+          <div class="w-full rounded-lg px-3 py-2 border bg-gray-50 text-gray-900" id="displayName">
+            —
+          </div>
         </div>
-        <div>
-         <label class="block text-sm font-medium text-gray-600">Toplam Öğrenci</label>
-         <input name="total_students" type="number" min="0" value="{{ master.total_students if master else 0 }}"
-       class="mt-1 w-full rounded-md border px-3 py-2">
 
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Şehir / Bölge (region)</label>
+          <div class="w-full rounded-lg px-3 py-2 border bg-gray-50 text-gray-900" id="displayRegion">
+            —
+          </div>
+          <p class="text-[11px] text-gray-500 mt-1">
+            Bu alan sistemde benzersizdir ve ana anahtar olarak kullanılır.
+          </p>
         </div>
       </div>
 
-      <div>
-          <label class="block text-sm text-gray-600 mb-1">Renk</label>
-          <input name="color" class="w-full border rounded-lg px-3 py-2" placeholder="Yeşil / Sarı / Kırmızı" value="{{ master.color if master else '' }}">
+      <!-- Editable numeric stats -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-600 mb-1">
+            Aylık Öğrenci Sayısı
+          </label>
+          <input name="student_count"
+                 id="fieldStudentCount"
+                 type="number"
+                 min="0"
+                 class="w-full border rounded-lg px-3 py-2 text-gray-900"
+                 placeholder="0">
         </div>
 
+        <div>
+          <label class="block text-sm font-medium text-gray-600 mb-1">
+            Toplam Öğrenci
+          </label>
+          <input name="total_students"
+                 id="fieldTotalStudents"
+                 type="number"
+                 min="0"
+                 class="w-full border rounded-lg px-3 py-2 text-gray-900"
+                 placeholder="0">
+        </div>
+      </div>
+
+      <!-- Color select -->
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">Renk</label>
+        <select name="color"
+                id="fieldColor"
+                class="w-full border rounded-lg px-3 py-2 text-gray-900">
+          <option value="">Renk seç...</option>
+          <option value="yeşil">Yeşil</option>
+          <option value="sarı">Sarı</option>
+          <option value="kırmızı">Kırmızı</option>
+        </select>
+        <p class="text-[11px] text-gray-500 mt-1">
+          Haritadaki renklendirme bu değere göre yapılıyor.
+        </p>
+      </div>
+
+      <!-- Actions -->
       <div class="flex items-center justify-end gap-3 pt-2">
-        <a href="{{ url_for('dashboard') }}" class="px-4 py-2 rounded-lg border hover:opacity-50 transition">İptal</a>
-        <button type="submit" class="px-5 py-2 rounded-lg bg-pink-600 transition cursor-pointer text-white hover:bg-pink-700">Kaydet</button>
+        <a href="{{ url_for('dashboard') }}"
+           class="px-4 py-2 rounded-lg border text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition">
+          İptal
+        </a>
+
+        <button type="submit"
+                class="px-5 py-2 rounded-lg bg-pink-600 transition cursor-pointer text-white hover:bg-pink-700 text-sm font-semibold">
+          Kaydet
+        </button>
       </div>
     </form>
-  </div>
+  </main>
+
+  <script>
+    // This object will hold all masters, keyed by region.
+    // We'll build it from Jinja so JS can populate fields when admin selects a master.
+    const MASTERS_DATA = {
+      {% for m in masters %}
+      "{{ m.region|e }}": {
+        "name": "{{ m.name|e }}",
+        "region": "{{ m.region|e }}",
+        "student_count": {{ m.student_count if m.student_count is not none else 0 }},
+        "total_students": {{ m.total_students if m.total_students is not none else 0 }},
+        "color": "{{ (m.color or '')|e }}"
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    };
+
+    const masterSelect       = document.getElementById('masterSelect');
+
+    // hidden real submit fields
+    const fieldName          = document.getElementById('fieldName');
+    const fieldRegion        = document.getElementById('fieldRegion');
+
+    // editable inputs
+    const fieldStudentCount  = document.getElementById('fieldStudentCount');
+    const fieldTotalStudents = document.getElementById('fieldTotalStudents');
+    const fieldColor         = document.getElementById('fieldColor');
+
+    // display-only boxes
+    const displayName        = document.getElementById('displayName');
+    const displayRegion      = document.getElementById('displayRegion');
+
+    masterSelect.addEventListener('change', () => {
+      const selectedRegion = masterSelect.value;
+      const data = MASTERS_DATA[selectedRegion];
+      if (!data) return;
+
+      // fill hidden submit fields
+      fieldName.value   = data.name;
+      fieldRegion.value = data.region;
+
+      // fill visible previews
+      displayName.textContent   = data.name;
+      displayRegion.textContent = data.region;
+
+      // fill editable stuff
+      fieldStudentCount.value  = data.student_count ?? 0;
+      fieldTotalStudents.value = data.total_students ?? 0;
+
+      // set color select, try to match lowercase
+      const normalizedColor = (data.color || "").toLowerCase();
+      fieldColor.value = normalizedColor;
+    });
+  </script>
+  {% include 'footer.html' %}
+</body>
