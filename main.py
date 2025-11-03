@@ -12,6 +12,12 @@ import os
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "daşlfsöşlöw#>£#½!!"
+# Increase wait time for busy DB
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "connect_args": {"timeout": 30},  # seconds
+}
+
 
 #Login User
 login_manager = LoginManager()
@@ -49,7 +55,6 @@ class Distributor(db.Model):
         backref=db.backref("distributor_profile", uselist=False),
         uselist=False
     )
-
 
 class Masters(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -231,8 +236,12 @@ def dashboard():
         master = current_user.master
         if master:
             greeting_name = master.name
-            contract_date = master.contract_date
-            contract_end = master.contract_date.replace(year=master.contract_date.year + 1)
+            try:
+                contract_date = master.contract_date
+                contract_end = master.contract_date.replace(year=master.contract_date.year + 1)
+            except Exception:
+                contract_date = None
+                contract_end = None
             monthly_students = master.student_count
             discount = compute_discount(monthly_students)
 
@@ -543,8 +552,6 @@ def reset_data():
     db.session.commit()
 
     return "Tüm öğrenci sayıları ve satın alımlar sıfırlanmıştır.", 200
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
