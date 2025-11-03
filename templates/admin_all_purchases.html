@@ -1,56 +1,173 @@
 {% include 'base.html' %}
 {% include 'navbar.html' %}
 <body class="bg-gray-50 min-h-screen">
-  <div class="max-w-6xl mx-auto py-10 px-6">
-    <h1 class="text-2xl font-bold mb-6 text-gray-800">Tüm Satın Alımlar</h1>
+  <div class="max-w-7xl mx-auto py-8 px-6">
+    <h1 class="text-2xl font-bold mb-4 text-gray-900">Tüm Satın Alımlar</h1>
 
-    {% if purchases %}
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-2xl shadow p-4">
+        <div class="text-xs text-gray-500">Toplam Adet</div>
+        <div class="text-2xl font-bold">{{ kpi_total_units }}</div>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-4">
+        <div class="text-xs text-gray-500">Toplam Sipariş</div>
+        <div class="text-2xl font-bold">{{ kpi_total_orders }}</div>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-4">
+        <div class="text-xs text-gray-500">Aktif Distribütör</div>
+        <div class="text-2xl font-bold">{{ kpi_distinct_distributors }}</div>
+      </div>
+    </div>
+
+    <form class="bg-white rounded-2xl shadow p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3" method="get">
+        <select name="distributor"
+          class="border rounded-lg px-3 py-2 text-sm md:col-span-1">
+    <option value="">Tüm Distribütörler</option>
+    {% for name in distributors %}
+      <option value="{{ name }}" {% if name == q_distributor %}selected{% endif %}>
+        {{ name.title() }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <select name="product"
+          class="border rounded-lg px-3 py-2 text-sm md:col-span-1">
+    <option value="">Tüm Ürünler</option>
+    {% for name in products %}
+      <option value="{{ name }}" {% if name == q_product %}selected{% endif %}>
+        {{ name.title() }}
+      </option>
+    {% endfor %}
+  </select>
+      
+             <input name="from" value="{{ q_from }}" type="datetime-local" class="border rounded-lg px-3 py-2 text-sm md:col-span-1">
+      <input name="to"   value="{{ q_to }}"   type="datetime-local" class="border rounded-lg px-3 py-2 text-sm md:col-span-1">
+      <div class="flex gap-2 md:col-span-1">
+        <button class="px-4 py-2 bg-pink-600 text-white text-sm rounded-lg">Filtrele</button>
+        <a href="{{ url_for('all_purchases') }}" class="px-4 py-2 bg-gray-100 text-sm rounded-lg">Sıfırla</a>
+      </div>
+    </form>
+
+    <!-- Tabs -->
+    <div class="mb-3 flex gap-2">
+      <button data-tab="table" class="cursor-pointer tab-btn px-3 py-2 rounded-lg bg-pink-600 text-white text-sm">Tablo</button>
+      <button data-tab="by-distributor" class="cursor-pointer tab-btn px-3 py-2 rounded-lg bg-gray-100 text-sm">Distribütöre Göre</button>
+      <button data-tab="by-product" class="cursor-pointer tab-btn px-3 py-2 rounded-lg bg-gray-100 text-sm">Ürüne Göre</button>
+      <a href="{{ url_for('purchase_form') }}"
+         class="ml-auto px-3 py-2 rounded-lg border border-pink-600 text-sm hover:bg-pink-600 hover:text-white transition text-pink-600">+ Satın Alım Ekle</a>
+    </div>
+
+    <!-- Tab: Table -->
+    <div id="tab-table" class="tab-panel">
+      {% if purchases %}
       <div class="overflow-x-auto bg-white shadow rounded-2xl">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
           <thead class="bg-gray-100">
             <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Distributor</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ürün</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Adet</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Tarih</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">ID</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Distributor</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Ürün</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Adet</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Tarih</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             {% for row in purchases %}
-              <tr class="hover:bg-gray-50 transition">
-                <td class="px-4 py-3 text-gray-800">{{ row.id }}</td>
-                <td class="px-4 py-3 text-gray-800">{{ row.distributor_name.title() }}</td>
-                <td class="px-4 py-3 text-gray-800">{{ row.product_name.title() }}</td>
-                <td class="px-4 py-3 font-semibold text-gray-900">{{ row.quantity }}</td>
-                <td class="px-4 py-3 text-gray-600">{{ row.created_at.strftime("%d %B %Y %H:%M") }}</td>
-              </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3">{{ row.id }}</td>
+              <td class="px-4 py-3">{{ row.distributor_name.title() }}</td>
+              <td class="px-4 py-3">{{ row.product_name.title() }}</td>
+              <td class="px-4 py-3 font-semibold">{{ row.quantity }}</td>
+              <td class="px-4 py-3 text-gray-500">
+                {{ row.created_at.strftime("%d %B %Y %H:%M") }}
+              </td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    {% else %}
-      <p class="text-gray-600 text-sm">Henüz bir satın alım yapılmadı.</p>
-    {% endif %}
 
-    <div class="mt-6">
-      <a href="{{ url_for('distributor_home') }}" class="bg-pink-600 text-white px-4 py-2 rounded-lg shadow hover:opacity-90 transition">
-        ← Panele Dön
-      </a>
+      <!-- Pagination -->
+      {% set last_page = (total_count // per_page) + (1 if total_count % per_page else 0) %}
+      <div class="flex items-center justify-between mt-4 text-sm">
+        <div class="text-gray-500">Toplam: {{ total_count }} kayıt</div>
+        <div class="flex gap-1">
+          {% if page > 1 %}
+          <a class="px-3 py-1 rounded border" href="{{ url_for('all_purchases', page=page-1, per_page=per_page, distributor=q_distributor, product=q_product, from=q_from, to=q_to) }}">Önceki</a>
+          {% endif %}
+          <span class="px-3 py-1">{{ page }} / {{ last_page if last_page else 1 }}</span>
+          {% if page < last_page %}
+          <a class="px-3 py-1 rounded border" href="{{ url_for('all_purchases', page=page+1, per_page=per_page, distributor=q_distributor, product=q_product, from=q_from, to=q_to) }}">Sonraki</a>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+        <p class="text-gray-600 text-sm">Henüz bir satın alım yapılmadı.</p>
+      {% endif %}
     </div>
+
+    <!-- Tab: By Distributor -->
+    <div id="tab-by-distributor" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Distributor</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Toplam Adet</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for row in by_distributor %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3">{{ row.distributor_name.title() }}</td>
+              <td class="px-4 py-3 font-semibold">{{ row.total_qty }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: By Product -->
+    <div id="tab-by-product" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Ürün</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700">Toplam Adet</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for row in by_product %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3">{{ row.product_name.title() }}</td>
+              <td class="px-4 py-3 font-semibold">{{ row.total_qty }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
-  {% if current_user.is_authenticated and current_user.role == 'admin' %}
-<a
-  href="{{url_for('purchase_form')}}"
-  class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-700 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-pink-300 shadow-lg flex items-center justify-center"
-  aria-label="Yeni/Ekle"
-  title="Yeni/Ekle"
->
-  <!-- plus icon -->
-  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
-  </svg>
-</a>
-{% endif %}
-  {% include 'footer.html' %}
+
+  <script>
+    // Simple tabs
+    const btns = document.querySelectorAll('.tab-btn');
+    const panels = {
+      'table': document.getElementById('tab-table'),
+      'by-distributor': document.getElementById('tab-by-distributor'),
+      'by-product': document.getElementById('tab-by-product')
+    };
+    btns.forEach(b => b.addEventListener('click', () => {
+      btns.forEach(x => x.classList.remove('bg-pink-600','text-white'));
+      btns.forEach(x => x.classList.add('bg-gray-100'));
+      b.classList.remove('bg-gray-100'); b.classList.add('bg-pink-600','text-white');
+      const k = b.dataset.tab;
+      Object.values(panels).forEach(p => p.classList.add('hidden'));
+      panels[k].classList.remove('hidden');
+    }));
+  </script>
 </body>

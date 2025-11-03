@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime, update
+from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime, update, func, desc
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from functools import wraps
@@ -261,9 +261,11 @@ def dashboard():
 
 @app.get("/distributor/portal")
 @login_required
+@roles_required('distributor', 'admin')
 def distributor_home():
     rows = db.session.scalars(db.select(Distributor)).all()
     now = datetime.now()
+
     distributor_data = {
         _normalize_tr(d.country): {
             "name": d.name,
@@ -273,23 +275,25 @@ def distributor_home():
         for d in rows
     }
 
-   
     if current_user.role == "admin":
         distributor_id = request.args.get("distributor_id", type=int)
     else:
-        distributor_id = current_user.id 
+        distributor_id = current_user.id
 
-   
     distributor_name = None
     distributor_contract_date = None
     distributor_contract_date_end = None
     distributor_region = None
 
     if current_user.role == "distributor" and current_user.distributor_profile:
-        distributor_name = current_user.distributor_profile.name
-        distributor_contract_date = current_user.distributor_profile.contract_date
-        distributor_region = current_user.distributor_profile.country
-        distributor_contract_date_end = current_user.distributor_profile.contract_date.replace(year=current_user.distributor_profile.contract_date.year + 1)
+        prof = current_user.distributor_profile
+        distributor_name = prof.name
+        distributor_contract_date = prof.contract_date
+        distributor_region = prof.country
+        distributor_contract_date_end = (
+            prof.contract_date.replace(year=prof.contract_date.year + 1)
+            if prof.contract_date else None
+        )
 
     purchases_summary = []
     if distributor_id:
@@ -304,31 +308,55 @@ def distributor_home():
             .order_by(Product.name)
         ).all()
 
-    total_purchases = db.session.execute(
-        db.select(
-            Purchase.id,
-            User.username.label('distributor_name'),
-            Product.name.label('product_name'),
-            Purchase.quantity,
-            Purchase.created_at
-        )
-        .join(User, Purchase.distributor_id == User.id)
-        .join(Product, Purchase.product_id == Product.id)
-        .order_by(Purchase.created_at.desc())
-        .limit(10)
+    # Build per-country, per-product totals (including zeros)
+    dist_rows = db.session.execute(
+        db.select(Distributor.country, Distributor.user_id)
     ).all()
+
+    def _norm(s: str) -> str:
+        import unicodedata
+        if not s: return ""
+        s = unicodedata.normalize("NFD", s).replace("\u0307","").lower()
+        for a,b in [("ı","i"),("ğ","g"),("ü","u"),("ş","s"),("ö","o"),("ç","c")]:
+            s = s.replace(a,b)
+        return "".join(ch for ch in s if unicodedata.category(ch) != "Mn").strip()
+
+    country_to_distid = { _norm(c): uid for (c, uid) in dist_rows }
+
+    all_products = [
+        p.name for p in db.session.scalars(db.select(Product).order_by(Product.name)).all()
+    ]
+
+    agg = db.session.execute(
+        db.select(Purchase.distributor_id, Product.name, db.func.sum(Purchase.quantity))
+          .join(Product, Purchase.product_id == Product.id)
+          .group_by(Purchase.distributor_id, Product.name)
+    ).all()
+
+    from collections import defaultdict
+    dist_totals = defaultdict(lambda: {name: 0 for name in all_products})
+    for dist_id, prod_name, qty in agg:
+        dist_totals[dist_id][prod_name] = int(qty or 0)
+
+    purchases_by_country = {}
+    for c_norm, dist_id in country_to_distid.items():
+        totals = dist_totals.get(dist_id, {name: 0 for name in all_products})
+        purchases_by_country[c_norm] = [
+            {"product": name, "quantity": int(totals.get(name, 0))}
+            for name in all_products
+        ]
 
     return render_template(
         "distributor.html",
         distributor_data=distributor_data,
         purchases_summary=purchases_summary,
-        total_purchases=total_purchases,
         distributor_contract_date=distributor_contract_date,
         distributor_contract_date_end=distributor_contract_date_end,
         distributor_name=distributor_name,
         distributor_id=distributor_id,
         distributor_region=distributor_region,
-        now=now
+        now=now,
+        purchases_by_country=purchases_by_country,
     )
 
 
@@ -431,23 +459,118 @@ def save_master():
 def account():
     return render_template("account.html")
 
-@app.route("/admin/tum-satin-alimlar")
+
+@app.get("/admin/tum-satin-alimlar")
 @admin_required
 def all_purchases():
-    purchases = db.session.execute(
+    # ---- Filters ----
+    q_distributor = request.args.get("distributor", "", type=str).strip()
+    q_product     = request.args.get("product", "", type=str).strip()
+    q_from        = request.args.get("from", "", type=str)
+    q_to          = request.args.get("to", "", type=str)
+    page          = max(request.args.get("page", 1, type=int), 1)
+    per_page      = min(request.args.get("per_page", 25, type=int), 200)
+
+    base = (
         db.select(
             Purchase.id,
-            User.username.label("distributor_name"),
-            Product.name.label("product_name"),
+            User.username.label('distributor_name'),
+            Product.name.label('product_name'),
             Purchase.quantity,
-            Purchase.created_at
+            Purchase.created_at,
         )
         .join(User, Purchase.distributor_id == User.id)
         .join(Product, Purchase.product_id == Product.id)
-        .order_by(Purchase.created_at.desc())
+    )
+
+    # Apply filters
+    if q_distributor:
+        base = base.where(User.username.ilike(f"%{q_distributor}%"))
+    if q_product:
+        base = base.where(Product.name.ilike(f"%{q_product}%"))
+
+    # date filter
+    from_dt = to_dt = None
+    try:
+        if q_from:
+            from_dt = datetime.fromisoformat(q_from)
+            base = base.where(Purchase.created_at >= from_dt)
+        if q_to:
+            # inclusive end-of-day if only date provided
+            to_dt = datetime.fromisoformat(q_to)
+            base = base.where(Purchase.created_at <= to_dt)
+    except ValueError:
+        pass  # ignore bad date formats gracefully
+
+    base = base.order_by(desc(Purchase.created_at))
+
+    # Pagination (server-side)
+    total_count = db.session.execute(
+        base.with_only_columns(func.count()).order_by(None)
+    ).scalar_one()
+
+    rows = db.session.execute(
+        base.limit(per_page).offset((page-1)*per_page)
     ).all()
 
-    return render_template("admin_all_purchases.html", purchases=purchases)
+    # ---- Aggregates for tabs ----
+    by_distributor = db.session.execute(
+        db.select(
+            User.username.label("distributor_name"),
+            func.sum(Purchase.quantity).label("total_qty")
+        )
+        .join(User, Purchase.distributor_id == User.id)
+        .group_by(User.username)
+        .order_by(desc(func.sum(Purchase.quantity)))
+    ).all()
+
+    by_product = db.session.execute(
+        db.select(
+            Product.name.label("product_name"),
+            func.sum(Purchase.quantity).label("total_qty")
+        )
+        .join(Product, Purchase.product_id == Product.id)
+        .group_by(Product.name)
+        .order_by(desc(func.sum(Purchase.quantity)))
+    ).all()
+
+    # KPIs
+    kpi_total_units = db.session.execute(
+        db.select(func.coalesce(func.sum(Purchase.quantity), 0))
+    ).scalar_one()
+    kpi_total_orders = db.session.execute(
+        db.select(func.count(Purchase.id))
+    ).scalar_one()
+    kpi_distinct_distributors = db.session.execute(
+        db.select(func.count(func.distinct(Purchase.distributor_id)))
+    ).scalar_one()
+
+    distributors = [r[0] for r in db.session.execute(
+        db.select(User.username).distinct()
+        .join(Purchase, Purchase.distributor_id == User.id)
+        .order_by(User.username)
+    ).all()]
+
+    products = [r[0] for r in db.session.execute(
+        db.select(Product.name).distinct()
+        .join(Purchase, Purchase.product_id == Product.id)
+        .order_by(Product.name)
+    ).all()]
+
+    return render_template(
+        "admin_all_purchases.html",
+        purchases=rows,
+        total_count=total_count,
+        page=page, per_page=per_page,
+        by_distributor=by_distributor,
+        by_product=by_product,
+        kpi_total_units=kpi_total_units,
+        kpi_total_orders=kpi_total_orders,
+        kpi_distinct_distributors=kpi_distinct_distributors,
+        q_distributor=q_distributor, q_product=q_product, q_from=q_from, q_to=q_to,
+        distributors=distributors,
+        products=products     
+    )
 
 @app.get("/admin/distributors/new")
 @admin_required
