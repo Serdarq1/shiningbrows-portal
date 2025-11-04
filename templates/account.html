@@ -21,7 +21,27 @@
       <h1 class="text-2xl font-bold text-gray-900 mb-1">
         Hesap Detayların:
       </h1>
-      <p class="text-gray-500 text-sm tracking-wide uppercase">{{ current_user.role }}</p>
+      <p class="text-gray-500 text-sm tracking-wide uppercase">{{ current_user.role}}</p>
+
+      {% if password_status %}
+        {% if password_status == "success" %}
+          <div class="mt-4 rounded-xl bg-green-50 text-green-700 px-4 py-3 text-sm font-semibold">
+            Şifren başarıyla güncellendi.
+          </div>
+        {% elif password_status == "invalid-current" %}
+          <div class="mt-4 rounded-xl bg-red-50 text-red-600 px-4 py-3 text-sm font-semibold">
+            Mevcut şifren hatalı. Lütfen tekrar dene.
+          </div>
+        {% elif password_status == "mismatch" %}
+          <div class="mt-4 rounded-xl bg-red-50 text-red-600 px-4 py-3 text-sm font-semibold">
+            Yeni şifreler eşleşmiyor.
+          </div>
+        {% elif password_status == "too-short" %}
+          <div class="mt-4 rounded-xl bg-red-50 text-red-600 px-4 py-3 text-sm font-semibold">
+            Yeni şifren en az 6 karakter olmalı.
+          </div>
+        {% endif %}
+      {% endif %}
 
       {% if current_user.master %}
       <div class="mt-6 text-left space-y-3">
@@ -56,11 +76,69 @@
       </div>
       {% endif %}
 
-      <div class="mt-8">
+      <form method="post"
+            action="{{ url_for('change_password') }}"
+            class="mt-10 text-left space-y-4">
+        <h2 class="text-lg font-semibold text-gray-900">
+          Şifre Değiştir
+        </h2>
+        <p class="text-sm text-gray-500">
+          Güvenliğin için mevcut şifreni doğrulayıp yeni şifreni belirleyebilirsin.
+        </p>
+
+        <div class="space-y-2">
+          <label for="current_password" class="text-sm font-medium text-gray-700">
+            Mevcut Şifre
+          </label>
+          <input type="password"
+                 id="current_password"
+                 name="current_password"
+                 required
+                 class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200" />
+        </div>
+
+        <div class="space-y-2">
+          <label for="new_password" class="text-sm font-medium text-gray-700">
+            Yeni Şifre
+          </label>
+          <input type="password"
+                 id="new_password"
+                 name="new_password"
+                 required
+                 minlength="6"
+                 class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200" />
+        </div>
+
+        <div class="space-y-2">
+          <label for="confirm_password" class="text-sm font-medium text-gray-700">
+            Yeni Şifre (Tekrar)
+          </label>
+          <input type="password"
+                 id="confirm_password"
+                 name="confirm_password"
+                 required
+                 minlength="6"
+                 class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200" />
+        </div>
+
+        <button type="submit"
+                class="w-full bg-pink-600 text-white font-semibold px-6 py-2.5 rounded-full shadow-sm hover:-translate-y-0.5 hover:bg-black/90 transition-all duration-200">
+          Şifreyi Güncelle
+        </button>
+      </form>
+
+      <div class="mt-10">
+        {% if current_user.role == 'master' or current_user.role == 'admin' %}
         <a href="{{ url_for('dashboard') }}"
-           class="inline-block bg-gray-900 text-white font-semibold px-6 py-2 rounded-full shadow-sm hover:-translate-y-0.5 hover:bg-black/90 transition-all duration-200">
+           class="inline-block bg-pink-600 text-white font-semibold px-6 py-2 rounded-full shadow-sm hover:-translate-y-0.5 hover:bg-black/90 transition-all duration-200">
           Portala geri dön
         </a>
+        {% elif current_user == 'distributor' %}
+        <a href="{{ url_for('distributor_home') }}"
+           class="inline-block bg-pink-600 text-white font-semibold px-6 py-2 rounded-full shadow-sm hover:-translate-y-0.5 hover:bg-black/90 transition-all duration-200">
+          Portala geri dön
+        </a>
+        {% endif %}
       </div>
     </div>
   </div>

@@ -454,10 +454,34 @@ def save_master():
     return redirect(url_for('dashboard'))
 
 @app.route("/hesap")
-@roles_required('master', 'admin')
 @login_required
 def account():
-    return render_template("account.html")
+    password_status = request.args.get("password_status", default="", type=str)
+    return render_template("account.html", password_status=password_status)
+
+
+@app.post("/hesap/sifre-degistir")
+@roles_required('master', 'admin')
+@login_required
+def change_password():
+    current_password = (request.form.get("current_password") or "").strip()
+    new_password = (request.form.get("new_password") or "").strip()
+    confirm_password = (request.form.get("confirm_password") or "").strip()
+
+    if not check_password_hash(current_user.password_hash, current_password):
+        return redirect(url_for("account", password_status="invalid-current"))
+
+    if len(new_password) < 6:
+        return redirect(url_for("account", password_status="too-short"))
+
+    if new_password != confirm_password:
+        return redirect(url_for("account", password_status="mismatch"))
+
+    current_user.password_hash = generate_password_hash(new_password, salt_length=8)
+    db.session.add(current_user)
+    db.session.commit()
+
+    return redirect(url_for("account", password_status="success"))
 
 
 @app.get("/admin/tum-satin-alimlar")

@@ -14,7 +14,6 @@
 </head>
 <body class="min-h-screen bg-gray-50">
  {% include 'navbar.html' %}
- {% include 'sale.html' %}
 
  {% if current_user.is_authenticated and current_user.role == 'admin' %}
 <div class="bg-white shadow rounded-xl p-5 mb-6 text-center">
