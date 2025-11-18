@@ -24,18 +24,23 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-
 #Create DB
 class Base(DeclarativeBase):
     pass
 
 def get_db_uri():
     uri = os.getenv("DATABASE_URL")
-    if uri:
-        if uri.startswith("postgres://"):
-            uri = uri.replace("postgres://", "postgresql://", 1)
-        return uri
-    return "sqlite:///students.db"
+
+    if not uri:
+        return "sqlite:///students.db"
+
+    if uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql+psycopg2://", 1)
+
+    if uri.startswith("postgresql://") and "psycopg2" not in uri:
+        uri = uri.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+    return uri
 
 #Connect Database
 app.config["SQLALCHEMY_DATABASE_URI"] = get_db_uri()
