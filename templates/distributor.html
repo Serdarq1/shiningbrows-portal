@@ -125,6 +125,36 @@
       .replace(/[\u0300-\u036f]/g,"").trim();
   }
 
+  const COLOR_MAP = {
+    "yesil":  "#10b981","green":"#10b981",
+    "kirmizi":"#ef4444","kırmızı":"#ef4444","red":"#ef4444",
+    "sari":"#f59e0b","sarı":"#f59e0b","yellow":"#f59e0b",
+    "turuncu":"#f97316","orange":"#f97316",
+    "mavi":"#3b82f6","blue":"#3b82f6",
+    "mor":"#8b5cf6","purple":"#8b5cf6",
+    "gri":"#9ca3af","gray":"#9ca3af","grey":"#9ca3af"
+  };
+
+  const HEX_TO_NAME = {
+    "#eab308":"sari",
+    "#f59e0b":"sari",
+    "#22c55e":"yesil",
+    "#10b981":"yesil",
+    "#ef4444":"kirmizi",
+    "#dc2626":"kirmizi",
+    "#f97316":"turuncu",
+    "#3b82f6":"mavi",
+    "#2b6cb0":"mavi",
+    "#8b5cf6":"mor",
+    "#9ca3af":"gri",
+  };
+
+  const resolveColorKey = (raw) => {
+    const lower = (raw || "").toLowerCase();
+    const mapped = HEX_TO_NAME[lower] || raw;
+    return normalizeTr(mapped);
+  };
+
   function initMap(geojson) {
     const map = L.map('world', { zoomControl: true }).setView([30, 10], 2);
 
@@ -137,7 +167,8 @@
       const countryRaw = feat?.properties?.name || "";
       const key = normalizeTr(countryRaw);
       const dist = DISTRIBUTOR_DATA[key];
-      const color = dist?.color || "#e5e7eb";
+      const colorKey = resolveColorKey(dist?.color || "");
+      const color = COLOR_MAP[colorKey] || (dist?.color && dist.color.startsWith("#") ? dist.color : "#e5e7eb");
       return { color: "#111827", weight: 0.5, fillColor: color, fillOpacity: dist ? 0.85 : 0.25 };
     }
 
@@ -180,8 +211,4 @@
 
 </body>
 </html>
-
-
-
-
 

@@ -37,11 +37,15 @@
       Shining Brows ürünlerini <strong class="text-green-600">{{ discount }}%</strong> indirimle alabilirsin.
     {% endif %}
   </p>
-    <p class="mt-8"><span class="font-bold">Sözleşme başlama tarihi: </span> {{contract_date.day}}/{{contract_date.month}}/{{contract_date.year}} </p>
-     <p><span class="font-bold">Sözleşme bitiş tarihi: </span> {{contract_end.day}}/{{contract_end.month}}/{{contract_end.year}} </p>
-     {% if now > contract_end %}
-     <p class="text-red-600 font-bold mt-2">Sözleşme tarihiniz geçmiştir. Lütfen sözleşmenizi yenileyiniz. </p>
-     {% endif %}
+    {% if contract_date_str %}
+    <p class="mt-8"><span class="font-bold">Sözleşme başlama tarihi: </span> {{ contract_date_str }}</p>
+    {% endif %}
+    {% if contract_end_str %}
+    <p><span class="font-bold">Sözleşme bitiş tarihi: </span> {{ contract_end_str }}</p>
+    {% endif %}
+    {% if contract_end and now > contract_end %}
+    <p class="text-red-600 font-bold mt-2">Sözleşme tarihiniz geçmiştir. Lütfen sözleşmenizi yenileyiniz. </p>
+    {% endif %}
 
 </div>
 {% elif current_user.is_authenticated and can_edit %}
@@ -287,12 +291,42 @@
 
   const COLOR_MAP = {
     "yesil":  "#10b981",
+    "green":  "#10b981",
     "kirmizi":"#ef4444",
+    "kırmızı":"#ef4444",
+    "red":    "#ef4444",
     "sari":   "#f59e0b",
+    "sarı":   "#f59e0b",
+    "yellow": "#f59e0b",
     "mavi":   "#3b82f6",
+    "blue":   "#3b82f6",
     "mor":    "#8b5cf6",
+    "purple": "#8b5cf6",
     "turuncu":"#f97316",
-    "gri":    "#9ca3af"
+    "orange":"#f97316",
+    "gri":    "#9ca3af",
+    "gray":   "#9ca3af",
+    "grey":   "#9ca3af"
+  };
+
+  const HEX_TO_NAME = {
+    "#eab308": "sari",
+    "#f59e0b": "sari",
+    "#22c55e": "yesil",
+    "#10b981": "yesil",
+    "#ef4444": "kirmizi",
+    "#dc2626": "kirmizi",
+    "#f97316": "turuncu",
+    "#3b82f6": "mavi",
+    "#2b6cb0": "mavi",
+    "#8b5cf6": "mor",
+    "#9ca3af": "gri",
+  };
+
+  const resolveColorKey = (raw) => {
+    const lower = (raw || "").toLowerCase();
+    const mapped = HEX_TO_NAME[lower] || raw;
+    return normalize(mapped);
   };
 
   // --- LIST VIEW LOGIC ---
@@ -314,11 +348,22 @@
   }
 
   function colorBadge(colorName) {
-    const c = COLOR_MAP[normalize(colorName)] || "#9ca3af";
+    const normalized = resolveColorKey(colorName);
+    const labelMap = {
+      "green":"Yeşil","yesil":"Yeşil",
+      "red":"Kırmızı","kirmizi":"Kırmızı","kırmızı":"Kırmızı",
+      "yellow":"Sarı","sari":"Sarı","sarı":"Sarı",
+      "orange":"Turuncu","turuncu":"Turuncu",
+      "blue":"Mavi","mavi":"Mavi",
+      "purple":"Mor","mor":"Mor",
+      "gray":"Gri","gri":"Gri","grey":"Gri"
+    };
+    const c = COLOR_MAP[normalized] || (colorName && colorName.startsWith("#") ? colorName : "#9ca3af");
+    const display = labelMap[normalized] || colorName || "-";
     return `
       <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium text-white"
             style="background:${c};">
-        ${colorName || "-"}
+        ${display}
       </span>
     `;
   }
@@ -402,7 +447,8 @@
       const rec  = PROVINCE_DATA[normalize(prov)];
       let fill = '#ffffff';
       if (rec?.color) {
-        fill = COLOR_MAP[normalize(rec.color)] || fill;
+        const key = resolveColorKey(rec.color);
+        fill = COLOR_MAP[key] || (rec.color.startsWith("#") ? rec.color : fill);
       }
       return {
         color:'#000',

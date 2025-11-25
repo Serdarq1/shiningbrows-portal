@@ -160,6 +160,49 @@ def _normalize_tr(s: str) -> str:
     s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
     return s.strip()
 
+COLOR_NAME_MAP = {
+    "yesil": "yesil",
+    "green": "yesil",
+    "kirmizi": "kirmizi",
+    "kırmızı": "kirmizi",
+    "red": "kirmizi",
+    "sari": "sari",
+    "sarı": "sari",
+    "yellow": "sari",
+    "turuncu": "turuncu",
+    "orange": "turuncu",
+    "mavi": "mavi",
+    "blue": "mavi",
+    "mor": "mor",
+    "purple": "mor",
+    "gri": "gri",
+    "gray": "gri",
+    "grey": "gri",
+}
+
+COLOR_HEX_TO_NAME = {
+    "#22c55e": "yesil",
+    "#10b981": "yesil",
+    "#2b6cb0": "mavi",
+    "#3b82f6": "mavi",
+    "#8b5cf6": "mor",
+    "#f97316": "turuncu",
+    "#f59e0b": "sari",
+    "#eab308": "sari",
+    "#ef4444": "kirmizi",
+    "#dc2626": "kirmizi",
+    "#9ca3af": "gri",
+}
+
+def _normalize_color_choice(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    s = raw.strip().lower()
+    if s.startswith("#"):
+        return COLOR_HEX_TO_NAME.get(s, None) or s
+    s = _normalize_tr(s)
+    return COLOR_NAME_MAP.get(s, s or None)
+
 def compute_discount(monthly_students: int) -> int:
     if monthly_students >= 5: return 40
     if monthly_students >= 3: return 20
@@ -265,7 +308,7 @@ def dashboard():
         _normalize_tr(r.region): {
             "name": r.name,
             "student_count": r.student_count,
-            "color": r.color,
+            "color": _normalize_color_choice(r.color),
             "total_students": getattr(r, "total_students", None),
         } for r in rows
     }
@@ -275,24 +318,32 @@ def dashboard():
     monthly_students = 0
     discount = 0
 
-    total_month = sum(r.student_count for r in rows)
-    total_alltime = sum((r.total_ballots if False else r.total_students) for r in rows)
+    # Defensive defaults to handle any historical NULLs
+    total_month = sum((r.student_count or 0) for r in rows)
+    total_alltime = sum(((r.total_ballots if False else r.total_students) or 0) for r in rows)
 
     contract_date = None
     contract_end = None
+    contract_date_str = None
+    contract_end_str = None
     now = datetime.now()
 
     if current_user.is_authenticated and getattr(current_user, "role", None) == "master":
         master = current_user.master
         if master:
             greeting_name = master.name
-            try:
-                contract_date = master.contract_date
-                contract_end = master.contract_date.replace(year=master.contract_date.year + 1)
-            except Exception:
-                contract_date = None
-                contract_end = None
-            monthly_students = master.student_count
+            contract_date = master.contract_date
+            if contract_date:
+                try:
+                    contract_end = contract_date.replace(year=contract_date.year + 1)
+                    contract_date_str = contract_date.strftime("%d/%m/%Y")
+                    contract_end_str = contract_end.strftime("%d/%m/%Y")
+                except Exception:
+                    contract_date = None
+                    contract_end = None
+                    contract_date_str = None
+                    contract_end_str = None
+            monthly_students = master.student_count or 0
             discount = compute_discount(monthly_students)
 
     return render_template(
@@ -306,6 +357,8 @@ def dashboard():
         total_alltime=total_alltime,
         contract_date=contract_date,
         contract_end=contract_end,
+        contract_date_str=contract_date_str,
+        contract_end_str=contract_end_str,
         now=now
     )
 
@@ -319,7 +372,7 @@ def distributor_home():
     distributor_data = {
         _normalize_tr(d.country): {
             "name": d.name,
-            "color": d.color,
+            "color": _normalize_color_choice(d.color),
             "contract_date": d.contract_date.strftime("%Y-%m-%d") if d.contract_date else None,
         }
         for d in rows
@@ -467,6 +520,9 @@ def create_purchase():
 @roles_required("admin")
 def master_edit_form():
     masters = db.session.scalars(db.select(Masters).order_by(Masters.name)).all()
+    # normalize colors to canonical names for UI
+    for m in masters:
+        m.color = _normalize_color_choice(m.color)
     return render_template(
         "master_form.html",
         masters=masters
@@ -478,7 +534,7 @@ def master_edit_form():
 def save_master():
     name = request.form.get('name','').strip()
     region = request.form.get('region','').strip()
-    color = request.form.get('color','').strip()
+    color = _normalize_color_choice(request.form.get('color')) or "yesil"
     student_count = int(request.form.get('student_count','0') or 0)
     total_students = int(request.form.get('total_students','0') or 0)
 
@@ -658,7 +714,7 @@ def create_distributor():
     password = request.form.get("password") or ""
     full_name = (request.form.get("full_name") or "").strip()
     country = (request.form.get("country") or "").strip()
-    color = (request.form.get("color") or "#2b6cb0").strip()
+    color = _normalize_color_choice(request.form.get("color")) or "mavi"
 
     if not (username and password and full_name and country):
         return "Tüm alanların (kullanıcı adı, şifre, isim, ülke) doldurulması zorunludur.", 400
@@ -678,7 +734,7 @@ def create_distributor():
         user_id=user.id,
         name=full_name,
         country=country, 
-        color=color or "#2b6cb0",
+        color=color or "mavi",
     )
     db.session.add(dist)
     db.session.commit()
@@ -698,7 +754,7 @@ def create_master():
 
     full_name = (request.form.get("full_name") or "").strip()
     region = (request.form.get("region") or "").strip()           
-    color = (request.form.get("color") or "#22c55e").strip()     
+    color = _normalize_color_choice(request.form.get("color")) or "yesil"
 
     student_count_raw = request.form.get("student_count", "0")
     total_students_raw = request.form.get("total_students", "0")

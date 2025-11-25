@@ -98,10 +98,13 @@
                 id="fieldColor"
                 class="w-full border rounded-lg px-3 py-2 text-gray-900">
           <option value="">Renk seç...</option>
-          <option value="yeşil">Yeşil</option>
-          <option value="sarı">Sarı</option>
-           <option value="turuncu">Turuncu</option>
-          <option value="kırmızı">Kırmızı</option>
+          <option value="yesil">Yeşil</option>
+          <option value="sari">Sarı</option>
+          <option value="turuncu">Turuncu</option>
+          <option value="kirmizi">Kırmızı</option>
+          <option value="mavi">Mavi</option>
+          <option value="mor">Mor</option>
+          <option value="gri">Gri</option>
         </select>
         <p class="text-[11px] text-gray-500 mt-1">
           Haritadaki renklendirme bu değere göre yapılıyor.
@@ -176,10 +179,24 @@
       fieldStudentCount.value  = data.student_count ?? 0;
       fieldTotalStudents.value = data.total_students ?? 0;
 
-      // set color select, try to match lowercase
-      const normalizedColor = (data.color || "").toLowerCase();
+      // set color select, try to match canonical name
+      const normalizedColor = normalizeColorChoice(data.color || "");
       fieldColor.value = normalizedColor;
     });
+
+    function normalizeColorChoice(raw) {
+      const s = (raw || "").toLowerCase();
+      const lookup = {
+        "#22c55e":"yesil","#10b981":"yesil","yesil":"yesil","green":"yesil",
+        "#ef4444":"kirmizi","#dc2626":"kirmizi","kirmizi":"kirmizi","kırmızı":"kirmizi","red":"kirmizi",
+        "#f59e0b":"sari","#eab308":"sari","sari":"sari","sarı":"sari","yellow":"sari",
+        "#f97316":"turuncu","turuncu":"turuncu","orange":"turuncu",
+        "#3b82f6":"mavi","#2b6cb0":"mavi","mavi":"mavi","blue":"mavi",
+        "#8b5cf6":"mor","mor":"mor","purple":"mor",
+        "#9ca3af":"gri","gri":"gri","gray":"gri","grey":"gri"
+      };
+      return lookup[s] || s;
+    }
   </script>
   {% include 'footer.html' %}
 </body>
