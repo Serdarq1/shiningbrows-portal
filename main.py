@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime, update, func, desc
@@ -262,6 +262,10 @@ def create_user():
 @app.route('/')
 def index():
     return render_template('./index.html')
+
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory(app.root_path, 'manifest.json', mimetype='application/manifest+json')
 
 @app.route('/giris-yap', methods=["POST", "GET"])
 def login():
