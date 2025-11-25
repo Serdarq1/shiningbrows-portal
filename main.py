@@ -2,21 +2,22 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Boolean, text, inspect, ForeignKey, DateTime, update, func, desc
+from sqlalchemy.pool import NullPool
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from functools import wraps
+from dotenv import load_dotenv
 
 from datetime import datetime
+from urllib.parse import quote_plus
 import unicodedata
 import os
 
+load_dotenv()
+print("DEBUG DATABASE_URL raw:", os.getenv("DATABASE_URL"))
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "daşlfsöşlöw#>£#½!!"
-# Increase wait time for busy DB
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "connect_args": {"timeout": 30},  # seconds
-}
 
 
 #Login User
@@ -28,24 +29,68 @@ login_manager.login_view = "login"
 class Base(DeclarativeBase):
     pass
 
-def get_db_uri():
-    uri = os.getenv("DATABASE_URL")
+def _build_uri_from_parts() -> str | None:
+    """
+    Build a connection string from discrete env vars (Supabase docs style):
+    user, password, host, port, dbname
+    """
+    user = os.getenv("user") or os.getenv("DB_USER")
+    password = os.getenv("password") or os.getenv("DB_PASSWORD")
+    host = os.getenv("host") or os.getenv("DB_HOST")
+    port = os.getenv("port") or os.getenv("DB_PORT") or "5432"
+    dbname = os.getenv("dbname") or os.getenv("DB_NAME")
 
+    if not (user and password and host and dbname):
+        return None
+
+    user_enc = quote_plus(user)
+    password_enc = quote_plus(password)
+    uri = f"postgresql+psycopg2://{user_enc}:{password_enc}@{host}:{port}/{dbname}"
+    if "sslmode=" not in uri:
+        uri = f"{uri}?sslmode=require"
+    return uri
+
+
+def get_db_uri():
+    """
+    Resolve the DB URI with Supabase-friendly tweaks:
+    - Prefer DATABASE_URL, then SUPABASE_DB_URL.
+    - If missing, build from user/password/host/port/dbname env vars.
+    - Normalize deprecated postgres:// prefix.
+    - Ensure sslmode=require for Supabase URLs if missing.
+    """
+    uri = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or _build_uri_from_parts()
     if not uri:
         return "sqlite:///students.db"
 
     if uri.startswith("postgres://"):
-        uri = uri.replace("postgres://", "postgresql+psycopg2://", 1)
+        uri = uri.replace("postgres://", "postgresql://", 1)
 
-    if uri.startswith("postgresql://") and "psycopg2" not in uri:
-        uri = uri.replace("postgresql://", "postgresql+psycopg2://", 1)
+    if "supabase.co" in uri and "sslmode=" not in uri:
+        sep = "&" if "?" in uri else "?"
+        uri = f"{uri}{sep}sslmode=require"
 
     return uri
 
+
 #Connect Database
 app.config["SQLALCHEMY_DATABASE_URI"] = get_db_uri()
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    # Supabase requires SSL and works best with short-lived connections
+    **(
+        {
+            "connect_args": {"sslmode": "require"},
+            "poolclass": NullPool,
+        }
+        if isinstance(app.config["SQLALCHEMY_DATABASE_URI"], str)
+        and "supabase.co" in app.config["SQLALCHEMY_DATABASE_URI"]
+        else {}
+    ),
+}
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
+print("🔗 CURRENT DATABASE:", app.config["SQLALCHEMY_DATABASE_URI"])
 
 class Distributor(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
