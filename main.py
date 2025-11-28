@@ -14,7 +14,6 @@ import unicodedata
 import os
 
 load_dotenv()
-print("DEBUG DATABASE_URL raw:", os.getenv("DATABASE_URL"))
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "daşlfsöşlöw#>£#½!!"
@@ -307,6 +306,7 @@ def logout():
 @app.route('/portal')
 @login_required
 def dashboard():
+    can_edit = current_user.is_authenticated and getattr(current_user, "role", None) in ("admin",)
     rows = db.session.scalars(db.select(Masters)).all()
     province_data = {
         _normalize_tr(r.region): {
@@ -314,9 +314,11 @@ def dashboard():
             "student_count": r.student_count,
             "color": _normalize_color_choice(r.color),
             "total_students": getattr(r, "total_students", None),
+            "contract_date": (
+                r.contract_date.strftime("%d.%m.%Y") if can_edit and r.contract_date else None
+            )
         } for r in rows
     }
-    can_edit = current_user.is_authenticated and getattr(current_user, "role", None) in ("admin",)
 
     greeting_name = None
     monthly_students = 0
@@ -340,8 +342,8 @@ def dashboard():
             if contract_date:
                 try:
                     contract_end = contract_date.replace(year=contract_date.year + 1)
-                    contract_date_str = contract_date.strftime("%d/%m/%Y")
-                    contract_end_str = contract_end.strftime("%d/%m/%Y")
+                    contract_date_str = contract_date.strftime("%d.%m.%Y")
+                    contract_end_str = contract_end.strftime("%d.%m.%Y")
                 except Exception:
                     contract_date = None
                     contract_end = None
@@ -368,7 +370,7 @@ def dashboard():
 
 @app.get("/distributor/portal")
 @login_required
-@roles_required('distributor', 'admin')
+@roles_required('distributor', 'admin', 'master')
 def distributor_home():
     rows = db.session.scalars(db.select(Distributor)).all()
     now = datetime.now()
@@ -377,15 +379,17 @@ def distributor_home():
         _normalize_tr(d.country): {
             "name": d.name,
             "color": _normalize_color_choice(d.color),
-            "contract_date": d.contract_date.strftime("%Y-%m-%d") if d.contract_date else None,
+            "contract_date": d.contract_date.strftime("%d.%m.%Y") if d.contract_date else None,
         }
         for d in rows
     }
 
     if current_user.role == "admin":
         distributor_id = request.args.get("distributor_id", type=int)
-    else:
+    elif current_user.role == "distributor":
         distributor_id = current_user.id
+    else:
+        distributor_id = None
 
     distributor_name = None
     distributor_contract_date = None

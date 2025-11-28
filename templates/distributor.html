@@ -187,7 +187,8 @@
       const key = normalizeTr(country);
       const dist = DISTRIBUTOR_DATA[key];
 
-      layer.bindTooltip(dist ? `${country} — ${dist.name}` : `${country}`, { sticky: true });
+      const contractNote = dist?.contract_date ? ` — Sözleşme: ${dist.contract_date}` : "";
+      layer.bindTooltip(dist ? `${country} — ${dist.name}${contractNote}` : `${country}`, { sticky: true });
 
       // 🔹 When admin clicks, render the selected country's purchases
       layer.on('click', () => {
@@ -196,7 +197,7 @@
         const title  = document.getElementById('countryTitle');
         const rows   = PURCHASES_BY_COUNTRY[key] || null;
 
-        title.textContent = `${country} - ${dist.name}`;
+        title.textContent = `${country} - ${dist.name} - Sözleşme: ${dist.contract_date}`;
 
         if (!rows || rows.length === 0) {
           list.classList.remove('hidden');

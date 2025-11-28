@@ -149,11 +149,13 @@
               <th class="px-4 py-3">Master</th>
               <th class="px-4 py-3 text-right">Aylık Öğrenci</th>
               <th class="px-4 py-3 text-right">Toplam Öğrenci</th>
+              {% if can_edit %}
+              <th class="px-4 py-3 text-right">Sözleşme Tarihi</th>
+              {% endif %}
               <th class="px-4 py-3 text-right">Renk</th>
             </tr>
           </thead>
           <tbody id="mastersTableBody" class="divide-y divide-gray-200 bg-white">
-            <!-- rows inserted by JS -->
           </tbody>
         </table>
       </div>
@@ -276,6 +278,7 @@
 
 <script>
   const PROVINCE_DATA = {{ province_data | tojson | safe }};
+  const CAN_VIEW_CONTRACT_DATES = {{ 'true' if can_edit else 'false' }};
 </script>
 
   <script>
@@ -352,6 +355,7 @@
         name: rec.name || "-",
         student_count: rec.student_count ?? 0,
         total_students: rec.total_students ?? 0,
+        contract_date: rec.contract_date || null,
         color: rec.color || "",
       };
     });
@@ -405,6 +409,10 @@
         <td class="px-4 py-3 text-right text-gray-900 font-semibold">
           ${r.total_students}
         </td>
+        ${CAN_VIEW_CONTRACT_DATES ? `
+        <td class="px-4 py-3 text-right text-gray-900 font-semibold">
+          ${r.contract_date || "-"}
+        </td>` : ""}
         <td class="px-4 py-3 text-right">
           ${colorBadge(r.color)}
         </td>
