@@ -43,6 +43,8 @@
       <!-- Hidden real inputs that will be submitted -->
       <input type="hidden" name="name" id="fieldName">
       <input type="hidden" name="region" id="fieldRegion">
+      <input type="hidden" name="total_students" id="fieldTotalStudentsHidden">
+      <input type="hidden" name="color" id="fieldColorHidden">
 
       <!-- Display-only name & region preview -->
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -82,11 +84,11 @@
           <label class="block text-sm font-medium text-gray-600 mb-1">
             Toplam Öğrenci
           </label>
-          <input name="total_students"
-                 id="fieldTotalStudents"
+          <input id="fieldTotalStudents"
                  type="number"
                  min="0"
-                 class="w-full border rounded-lg px-3 py-2 text-gray-900"
+                 class="w-full border rounded-lg px-3 py-2 text-gray-900 bg-gray-50"
+                 disabled
                  placeholder="0">
         </div>
       </div>
@@ -94,9 +96,9 @@
       <!-- Color select -->
       <div>
         <label class="block text-sm font-medium text-gray-600 mb-1">Renk</label>
-        <select name="color"
-                id="fieldColor"
-                class="w-full border rounded-lg px-3 py-2 text-gray-900">
+        <select id="fieldColor"
+                class="w-full border rounded-lg px-3 py-2 text-gray-900 bg-gray-50"
+                disabled>
           <option value="">Renk seç...</option>
           <option value="yesil">Yeşil</option>
           <option value="sari">Sarı</option>
@@ -107,7 +109,7 @@
           <option value="gri">Gri</option>
         </select>
         <p class="text-[11px] text-gray-500 mt-1">
-          Haritadaki renklendirme bu değere göre yapılıyor.
+          Haritadaki renklendirme aylık öğrenci sayısına göre otomatik hesaplanır.
         </p>
 
         <div class="mt-4">
@@ -156,11 +158,14 @@
     // editable inputs
     const fieldStudentCount  = document.getElementById('fieldStudentCount');
     const fieldTotalStudents = document.getElementById('fieldTotalStudents');
+    const fieldTotalStudentsHidden = document.getElementById('fieldTotalStudentsHidden');
     const fieldColor         = document.getElementById('fieldColor');
+    const fieldColorHidden   = document.getElementById('fieldColorHidden');
 
     // display-only boxes
     const displayName        = document.getElementById('displayName');
     const displayRegion      = document.getElementById('displayRegion');
+    let baseHistoricalTotal  = 0;
 
     masterSelect.addEventListener('change', () => {
       const selectedRegion = masterSelect.value;
@@ -177,12 +182,29 @@
 
       // fill editable stuff
       fieldStudentCount.value  = data.student_count ?? 0;
-      fieldTotalStudents.value = data.total_students ?? 0;
-
-      // set color select, try to match canonical name
-      const normalizedColor = normalizeColorChoice(data.color || "");
-      fieldColor.value = normalizedColor;
+      baseHistoricalTotal = Math.max((Number(data.total_students) || 0) - (Number(data.student_count) || 0), 0);
+      updateDerivedFields();
     });
+
+    fieldStudentCount.addEventListener('input', updateDerivedFields);
+
+    function updateDerivedFields() {
+      const monthlyStudents = Math.max(Number(fieldStudentCount.value) || 0, 0);
+      const nextTotal = baseHistoricalTotal + monthlyStudents;
+      const nextColor = computeMasterColor(monthlyStudents);
+
+      fieldTotalStudents.value = nextTotal;
+      fieldTotalStudentsHidden.value = nextTotal;
+      fieldColor.value = nextColor;
+      fieldColorHidden.value = nextColor;
+    }
+
+    function computeMasterColor(monthlyStudents) {
+      if (monthlyStudents >= 5) return "yesil";
+      if (monthlyStudents >= 3) return "sari";
+      if (monthlyStudents >= 1) return "turuncu";
+      return "kirmizi";
+    }
 
     function normalizeColorChoice(raw) {
       const s = (raw || "").toLowerCase();

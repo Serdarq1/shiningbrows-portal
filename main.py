@@ -208,6 +208,15 @@ def compute_discount(monthly_students: int) -> int:
     if monthly_students >= 1: return 10
     return 0
 
+def compute_master_color(monthly_students: int) -> str:
+    if monthly_students >= 5:
+        return "yesil"
+    if monthly_students >= 3:
+        return "sari"
+    if monthly_students >= 1:
+        return "turuncu"
+    return "kirmizi"
+
 def roles_required(*roles):
     def deco(view):
         @wraps(view)
@@ -378,6 +387,7 @@ def distributor_home():
     distributor_data = {
         _normalize_tr(d.country): {
             "name": d.name,
+            "country_display": d.country,
             "color": _normalize_color_choice(d.color),
             "contract_date": d.contract_date.strftime("%d.%m.%Y") if d.contract_date else None,
         }
@@ -542,26 +552,26 @@ def master_edit_form():
 def save_master():
     name = request.form.get('name','').strip()
     region = request.form.get('region','').strip()
-    color = _normalize_color_choice(request.form.get('color')) or "yesil"
     student_count = int(request.form.get('student_count','0') or 0)
-    total_students = int(request.form.get('total_students','0') or 0)
+    color = compute_master_color(student_count)
 
     if not (name and region):
         return render_template('error.html'), 400
 
     existing = db.session.scalar(db.select(Masters).where(Masters.region == region))
     if existing:
+        historical_total = max((existing.total_students or 0) - (existing.student_count or 0), 0)
         existing.name = name
         existing.color = color
         existing.student_count = student_count
-        existing.total_students = total_students
+        existing.total_students = historical_total + student_count
     else:
         db.session.add(Masters(
             name=name,
             region=region,
             color=color,
             student_count=student_count,
-            total_students=total_students,
+            total_students=student_count,
         ))
 
     db.session.commit()
@@ -762,7 +772,6 @@ def create_master():
 
     full_name = (request.form.get("full_name") or "").strip()
     region = (request.form.get("region") or "").strip()           
-    color = _normalize_color_choice(request.form.get("color")) or "yesil"
 
     student_count_raw = request.form.get("student_count", "0")
     total_students_raw = request.form.get("total_students", "0")
@@ -777,6 +786,8 @@ def create_master():
         total_students = int(total_students_raw or 0)
     except ValueError:
         return "Öğrenci sayısı rakam olmak zorundadır.", 400
+
+    color = compute_master_color(student_count)
 
     master = Masters(
         name=full_name,
