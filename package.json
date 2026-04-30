@@ -1,0 +1,24 @@
+{
+  "name": "shining-brows-master-analysis",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i static/input.css -o static/tailwind.css --minify",
+    "watch:css": "tailwindcss -i static/input.css -o static/tailwind.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Serdarq1/shiningbrows-portal.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Serdarq1/shiningbrows-portal/issues"
+  },
+  "homepage": "https://github.com/Serdarq1/shiningbrows-portal#readme",
+  "devDependencies": {
+    "tailwindcss": "^4.2.4"
+  }
+}

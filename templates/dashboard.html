@@ -357,6 +357,7 @@
         total_students: rec.total_students ?? 0,
         contract_date: rec.contract_date || null,
         color: rec.color || "",
+        stale: rec.stale || false,
       };
     });
   }
@@ -403,8 +404,9 @@
         <td class="px-4 py-3 text-gray-800">
           ${r.name}
         </td>
-        <td class="px-4 py-3 text-right text-gray-900 font-semibold">
+        <td class="px-4 py-3 text-right font-semibold ${r.stale ? 'text-gray-400' : 'text-gray-900'}">
           ${r.student_count}
+          ${r.stale ? '<span class="ml-1 text-[10px] font-normal text-amber-500 italic">güncellenmedi</span>' : ''}
         </td>
         <td class="px-4 py-3 text-right text-gray-900 font-semibold">
           ${r.total_students}

@@ -15,8 +15,9 @@ import os
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config["SECRET_KEY"] = "daşlfsöşlöw#>£#½!!"
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000  # 1 year cache for static assets
 
 
 #Login User
@@ -105,6 +106,10 @@ class Distributor(db.Model):
         uselist=False
     )
 
+class AppSettings(db.Model):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_monthly_reset: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
 class Masters(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(250), nullable=False)
@@ -112,7 +117,8 @@ class Masters(db.Model):
     region: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     color: Mapped[str] = mapped_column(String(250))
     total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0,server_default="0")
-    contract_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   
+    contract_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 class User(db.Model, UserMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -217,6 +223,21 @@ def compute_master_color(monthly_students: int) -> str:
         return "turuncu"
     return "kirmizi"
 
+def _auto_monthly_reset():
+    now = datetime.utcnow()
+    settings = db.session.scalar(db.select(AppSettings))
+    if settings is None:
+        settings = AppSettings(last_monthly_reset=None)
+        db.session.add(settings)
+
+    last = settings.last_monthly_reset
+    if last is None or (now.year, now.month) > (last.year, last.month):
+        db.session.execute(
+            db.update(Masters).values(student_count=0, color='kirmizi', updated_at=now)
+        )
+        settings.last_monthly_reset = now
+        db.session.commit()
+
 def roles_required(*roles):
     def deco(view):
         @wraps(view)
@@ -315,8 +336,10 @@ def logout():
 @app.route('/portal')
 @login_required
 def dashboard():
+    _auto_monthly_reset()
     can_edit = current_user.is_authenticated and getattr(current_user, "role", None) in ("admin",)
     rows = db.session.scalars(db.select(Masters)).all()
+    now_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     province_data = {
         _normalize_tr(r.region): {
             "name": r.name,
@@ -325,7 +348,10 @@ def dashboard():
             "total_students": getattr(r, "total_students", None),
             "contract_date": (
                 r.contract_date.strftime("%d.%m.%Y") if can_edit and r.contract_date else None
-            )
+            ),
+            "stale": bool(
+                can_edit and r.updated_at and r.updated_at < now_month
+            ),
         } for r in rows
     }
 
@@ -565,6 +591,7 @@ def save_master():
         existing.color = color
         existing.student_count = student_count
         existing.total_students = historical_total + student_count
+        existing.updated_at = datetime.utcnow()
     else:
         db.session.add(Masters(
             name=name,
@@ -572,10 +599,22 @@ def save_master():
             color=color,
             student_count=student_count,
             total_students=student_count,
+            updated_at=datetime.utcnow(),
         ))
 
     db.session.commit()
     return redirect(url_for('dashboard'))
+
+
+@app.post('/masters/reset-monthly')
+@roles_required('admin')
+def reset_monthly_counts():
+    db.session.execute(
+        db.update(Masters).values(student_count=0, color='kirmizi', updated_at=datetime.utcnow())
+    )
+    db.session.commit()
+    return redirect(url_for('master_edit_form'))
+
 
 @app.route("/hesap")
 @login_required
