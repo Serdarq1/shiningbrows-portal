@@ -120,6 +120,18 @@ class Masters(db.Model):
     contract_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+class DeletedMaster(db.Model):
+    """Students live only as counters on Masters, and the portal totals are sums
+    over those rows - so deleting a master would silently erase her students from
+    the company history. Her counts are archived here on delete and still counted."""
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(250), nullable=False)
+    region: Mapped[str] = mapped_column(String(250), nullable=False)
+    student_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_students: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class User(db.Model, UserMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
@@ -364,6 +376,18 @@ def dashboard():
     # Defensive defaults to handle any historical NULLs
     total_month = sum((r.student_count or 0) for r in rows)
     total_alltime = sum(((r.total_ballots if False else r.total_students) or 0) for r in rows)
+
+    # Students of deleted masters still count toward company history.
+    # Monthly only counts masters deleted during the current month - live rows get
+    # zeroed by _auto_monthly_reset each month, and archived ones must follow suit.
+    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    total_alltime += db.session.scalar(
+        db.select(db.func.coalesce(db.func.sum(DeletedMaster.total_students), 0))
+    ) or 0
+    total_month += db.session.scalar(
+        db.select(db.func.coalesce(db.func.sum(DeletedMaster.student_count), 0))
+        .where(DeletedMaster.deleted_at >= month_start)
+    ) or 0
 
     contract_date = None
     contract_end = None
@@ -617,6 +641,9 @@ def reset_monthly_counts():
     db.session.execute(
         db.update(Masters).values(student_count=0, color='kirmizi', updated_at=datetime.utcnow())
     )
+    # Archived monthly counts feed the same KPI, so clear them too. total_students
+    # is left alone - the all-time history must survive a monthly reset.
+    db.session.execute(db.update(DeletedMaster).values(student_count=0))
     db.session.commit()
     return redirect(url_for('master_edit_form'))
 
@@ -864,6 +891,15 @@ def delete_master(master_id):
     if not master:
         abort(404)
 
+    # Archive her students BEFORE the row goes, or they vanish from the totals
+    db.session.add(DeletedMaster(
+        name=master.name,
+        region=master.region,
+        student_count=master.student_count or 0,
+        total_students=master.total_students or 0,
+        deleted_at=datetime.utcnow(),
+    ))
+
     # Keep the login, just unlink it - user.master_id is a FK to masters.id
     db.session.execute(
         db.update(User).where(User.master_id == master_id).values(master_id=None)
@@ -934,6 +970,9 @@ def reset_data():
         m.total_students = 0
 
     db.session.execute(db.delete(Purchase))
+    # Full reset means the archived students go too, otherwise the totals
+    # would not actually read zero afterwards.
+    db.session.execute(db.delete(DeletedMaster))
 
     db.session.commit()
 

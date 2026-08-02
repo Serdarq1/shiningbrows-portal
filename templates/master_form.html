@@ -133,6 +133,22 @@
         </button>
       </div>
     </form>
+
+    <!-- Separate form: HTML forms cannot be nested inside the edit form above -->
+    <form id="deleteForm" method="post" action=""
+          class="hidden mt-6 bg-white p-6 rounded-sm shadow border border-red-200">
+      <h3 class="text-sm font-semibold text-gray-900 mb-1">Master'ı Sil</h3>
+      <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+        <strong id="deleteMasterName">—</strong> sistemden silinecek.
+        Bu master'ın öğrencileri <strong>silinmez</strong>:
+        toplam <strong id="deleteMasterTotal">0</strong> öğrenci arşivlenir ve portaldaki
+        toplam öğrenci sayısına dahil edilmeye devam eder.
+      </p>
+      <button type="submit"
+              class="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition cursor-pointer">
+        Seçili Master'ı Sil
+      </button>
+    </form>
   </main>
 
   <script>
@@ -141,6 +157,7 @@
     const MASTERS_DATA = {
       {% for m in masters %}
       "{{ m.region|e }}": {
+        "id": {{ m.id }},
         "name": "{{ m.name|e }}",
         "region": "{{ m.region|e }}",
         "student_count": {{ m.student_count if m.student_count is not none else 0 }},
@@ -170,6 +187,19 @@
     const displayUpdatedAt   = document.getElementById('displayUpdatedAt');
     let baseHistoricalTotal  = 0;
 
+    // delete form
+    const MASTER_DELETE_URL  = "{{ url_for('delete_master', master_id=0) }}";
+    const deleteForm         = document.getElementById('deleteForm');
+    const deleteMasterName   = document.getElementById('deleteMasterName');
+    const deleteMasterTotal  = document.getElementById('deleteMasterTotal');
+
+    deleteForm.addEventListener('submit', (e) => {
+      const label = deleteMasterName.textContent;
+      if (!confirm(`${label} silinecek. Öğrenci sayıları korunur, master kaydı geri alınamaz. Emin misin?`)) {
+        e.preventDefault();
+      }
+    });
+
     masterSelect.addEventListener('change', fillFromSelection);
 
     function fillFromSelection() {
@@ -190,6 +220,12 @@
       fieldStudentCount.value  = data.student_count ?? 0;
       baseHistoricalTotal = Math.max((Number(data.total_students) || 0) - (Number(data.student_count) || 0), 0);
       updateDerivedFields();
+
+      // point the delete form at the selected master and reveal it
+      deleteForm.action = MASTER_DELETE_URL.replace('/0/', '/' + data.id + '/');
+      deleteMasterName.textContent = `${data.name} (${data.region})`;
+      deleteMasterTotal.textContent = data.total_students ?? 0;
+      deleteForm.classList.remove('hidden');
     }
 
     // ?region=... lets the portal's "Düzenle" button open this form pre-selected
