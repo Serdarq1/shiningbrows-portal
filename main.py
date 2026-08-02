@@ -342,6 +342,8 @@ def dashboard():
     now_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     province_data = {
         _normalize_tr(r.region): {
+            "id": r.id,
+            "region_display": r.region,
             "name": r.name,
             "student_count": r.student_count,
             "color": _normalize_color_choice(r.color),
@@ -369,7 +371,9 @@ def dashboard():
     contract_end_str = None
     now = datetime.now()
 
-    if current_user.is_authenticated and getattr(current_user, "role", None) == "master":
+    # Keyed off the master profile, not the role, so a distributor who is also a
+    # master (master_id set) sees her own numbers here too. Admin view unchanged.
+    if current_user.is_authenticated and current_user.master and current_user.role != "admin":
         master = current_user.master
         if master:
             greeting_name = master.name
@@ -504,6 +508,7 @@ def distributor_home():
         distributor_region=distributor_region,
         now=now,
         purchases_by_country=purchases_by_country,
+        distributors=rows,
     )
 
 
@@ -797,6 +802,76 @@ def create_distributor():
     db.session.commit()
 
     return redirect(url_for("distributor_home"))
+
+@app.get("/admin/distributors/<int:dist_id>/duzenle")
+@admin_required
+def edit_distributor_form(dist_id):
+    dist = db.session.get(Distributor, dist_id)
+    if not dist:
+        abort(404)
+    dist.color = _normalize_color_choice(dist.color)
+    return render_template("admin_edit_distributor.html", dist=dist)
+
+
+@app.post("/admin/distributors/<int:dist_id>")
+@admin_required
+def update_distributor(dist_id):
+    dist = db.session.get(Distributor, dist_id)
+    if not dist:
+        abort(404)
+
+    full_name = (request.form.get("full_name") or "").strip()
+    country = (request.form.get("country") or "").strip()
+    if not (full_name and country):
+        return "İsim ve ülke zorunludur.", 400
+
+    dist.name = full_name
+    dist.country = country
+    dist.color = _normalize_color_choice(request.form.get("color")) or dist.color
+
+    contract_raw = (request.form.get("contract_date") or "").strip()
+    dist.contract_date = datetime.strptime(contract_raw, "%Y-%m-%d") if contract_raw else None
+
+    new_password = request.form.get("new_password") or ""
+    if new_password:
+        dist.user.password_hash = generate_password_hash(new_password, salt_length=8)
+
+    db.session.commit()
+    return redirect(url_for("distributor_home"))
+
+
+@app.post("/admin/distributors/<int:dist_id>/sil")
+@admin_required
+def delete_distributor(dist_id):
+    dist = db.session.get(Distributor, dist_id)
+    if not dist:
+        abort(404)
+
+    # Purchase.distributor_id -> user.id, so the purchase history has to go first
+    db.session.execute(db.delete(Purchase).where(Purchase.distributor_id == dist.user_id))
+    user = db.session.get(User, dist.user_id)
+    db.session.delete(dist)
+    if user:
+        db.session.delete(user)
+    db.session.commit()
+    return redirect(url_for("distributor_home"))
+
+
+@app.post("/masters/<int:master_id>/sil")
+@admin_required
+def delete_master(master_id):
+    master = db.session.get(Masters, master_id)
+    if not master:
+        abort(404)
+
+    # Keep the login, just unlink it - user.master_id is a FK to masters.id
+    db.session.execute(
+        db.update(User).where(User.master_id == master_id).values(master_id=None)
+    )
+    db.session.delete(master)
+    db.session.commit()
+    return redirect(url_for("dashboard"))
+
 
 @app.get("/admin/masters/yeni-master")
 @admin_required

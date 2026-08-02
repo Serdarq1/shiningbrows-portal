@@ -1,0 +1,77 @@
+{% include 'base.html' %}
+{% include 'navbar.html' %}
+
+<body class="min-h-screen bg-gray-50">
+  <div class="max-w-2xl mx-auto py-10 px-6">
+    <a href="{{ url_for('distributor_home') }}"
+       class="inline-flex items-center gap-1 mb-4 text-sm text-gray-600 hover:text-gray-900 transition">
+      ← Distributor Portalına Dön
+    </a>
+
+    <h1 class="text-2xl font-bold mb-6">Distributor Düzenle</h1>
+
+    <form action="{{ url_for('update_distributor', dist_id=dist.id) }}" method="post"
+          class="bg-white rounded-2xl shadow p-6 space-y-5">
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Kullanıcı Adı</label>
+        <input type="text" value="{{ dist.user.username }}" disabled
+               class="w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-500" />
+        <p class="text-xs text-gray-500 mt-1">Kullanıcı adı değiştirilemez.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Ad Soyad</label>
+        <input name="full_name" type="text" required value="{{ dist.name }}"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Ülke</label>
+        <input name="country" type="text" required value="{{ dist.country }}"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+        <p class="text-xs text-gray-500 mt-1">
+          Dünya haritasında renklendirme için ülke adı İngilizce girilmeli.
+          (örn. <em>Netherlands</em>, <em>Azerbaijan</em>).
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Renk</label>
+        <select name="color" class="w-full border border-gray-300 rounded-lg p-2">
+          {% for value, label in [('mavi','Mavi'), ('yesil','Yeşil'), ('sari','Sarı'),
+                                  ('turuncu','Turuncu'), ('kirmizi','Kırmızı'),
+                                  ('mor','Mor'), ('gri','Gri')] %}
+          <option value="{{ value }}" {% if dist.color == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Sözleşme Tarihi</label>
+        <input name="contract_date" type="date"
+               value="{{ dist.contract_date.strftime('%Y-%m-%d') if dist.contract_date else '' }}"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">Yeni Şifre (opsiyonel)</label>
+        <input name="new_password" type="password" autocomplete="new-password"
+               class="w-full border border-gray-300 rounded-lg p-2" />
+        <p class="text-xs text-gray-500 mt-1">Boş bırakılırsa şifre değişmez.</p>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <a href="{{ url_for('distributor_home') }}"
+           class="rounded-lg px-4 py-2 border border-gray-200 hover:bg-gray-50 transition">
+          İptal
+        </a>
+        <button type="submit"
+                class="rounded-lg px-4 py-2 bg-pink-600 text-white hover:opacity-90 transition">
+          Kaydet
+        </button>
+      </div>
+    </form>
+  </div>
+  {% include 'footer.html' %}
+</body>

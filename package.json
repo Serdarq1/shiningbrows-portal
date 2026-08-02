@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/Serdarq1/shiningbrows-portal#readme",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "tailwindcss": "^4.2.4"
   }
 }

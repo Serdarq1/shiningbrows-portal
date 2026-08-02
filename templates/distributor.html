@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
@@ -39,6 +39,45 @@
           class="text-sm font-semibold hover:opacity-80 transition bg-pink-600 px-3 py-2 rounded-xl transition hover:opacity-50 text-white mr-2">
           + Yeni Distributor
         </a></div>
+  </div>
+
+  <div class="mt-6 overflow-x-auto rounded-xl border border-gray-200">
+    <table class="min-w-full text-sm text-left text-gray-700">
+      <thead class="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-3">Ülke</th>
+          <th class="px-4 py-3">Distributor</th>
+          <th class="px-4 py-3">Kullanıcı Adı</th>
+          <th class="px-4 py-3">Sözleşme</th>
+          <th class="px-4 py-3 text-right">İşlemler</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 bg-white">
+        {% for d in distributors %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-semibold text-gray-900">{{ d.country }}</td>
+          <td class="px-4 py-3">{{ d.name }}</td>
+          <td class="px-4 py-3 text-gray-500">{{ d.user.username }}</td>
+          <td class="px-4 py-3 text-gray-500">
+            {{ d.contract_date.strftime('%d.%m.%Y') if d.contract_date else '-' }}
+          </td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            <a href="{{ url_for('edit_distributor_form', dist_id=d.id) }}"
+               class="inline-block px-3 py-1 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-100 transition">
+              Düzenle
+            </a>
+            <form method="post" action="{{ url_for('delete_distributor', dist_id=d.id) }}" class="inline"
+                  onsubmit="return confirm('{{ d.name }} ({{ d.country }}) ve tüm satın alım kayıtları silinecek. Bu işlem geri alınamaz. Emin misin?');">
+              <button type="submit"
+                      class="ml-1 px-3 py-1 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition cursor-pointer">
+                Sil
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 {% endif %}
@@ -178,7 +217,7 @@
   </script>
 
   <script>
-  fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+  fetch("{{ url_for('static', filename='world.geojson') }}")
     .then(r => r.json())
     .then(geo => initMap(geo));
 
@@ -396,7 +435,7 @@
   renderPurchasePanel();
 
   function initMap(geojson) {
-    const map = L.map('world', { zoomControl: true }).setView([30, 10], 2);
+    const map = L.map('world', { zoomControl: true, preferCanvas: true }).setView([30, 10], 2);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 6,

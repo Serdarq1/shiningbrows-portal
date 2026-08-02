@@ -1,19 +1,13 @@
 {% include 'base.html' %}
 <body class="min-h-screen bg-gray-50">
-  <header class="w-full border-b border-gray-200 bg-white sticky top-0 z-20">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">
-        Shining Brows — Master Yönetimi
-      </h1>
-      <nav class="flex items-center gap-4 text-sm">
-        <a href="{{ url_for('index') }}">
-          <img src="{{ url_for('static', filename='assets/SERDAR AKOVA (1).png') }}" class="w-24" />
-        </a>
-      </nav>
-    </div>
-  </header>
+  {% include 'navbar.html' %}
 
   <main class="max-w-xl mx-auto p-6">
+    <a href="{{ url_for('dashboard') }}"
+       class="inline-flex items-center gap-1 mb-4 text-sm text-gray-600 hover:text-gray-900 transition">
+      ← Portala Dön
+    </a>
+
     <h2 class="text-lg font-semibold text-gray-800 mb-2">Master Düzenle</h2>
     <p class="text-sm text-gray-500 mb-6">
       Bir master seç, değerleri güncelle ve <strong>Kaydet</strong>'e bas.
@@ -176,7 +170,9 @@
     const displayUpdatedAt   = document.getElementById('displayUpdatedAt');
     let baseHistoricalTotal  = 0;
 
-    masterSelect.addEventListener('change', () => {
+    masterSelect.addEventListener('change', fillFromSelection);
+
+    function fillFromSelection() {
       const selectedRegion = masterSelect.value;
       const data = MASTERS_DATA[selectedRegion];
       if (!data) return;
@@ -194,7 +190,14 @@
       fieldStudentCount.value  = data.student_count ?? 0;
       baseHistoricalTotal = Math.max((Number(data.total_students) || 0) - (Number(data.student_count) || 0), 0);
       updateDerivedFields();
-    });
+    }
+
+    // ?region=... lets the portal's "Düzenle" button open this form pre-selected
+    const wantedRegion = new URLSearchParams(location.search).get('region');
+    if (wantedRegion && MASTERS_DATA[wantedRegion]) {
+      masterSelect.value = wantedRegion;
+      fillFromSelection();
+    }
 
     fieldStudentCount.addEventListener('input', updateDerivedFields);
 

@@ -3,6 +3,11 @@
 
 <body class="min-h-screen bg-gray-50">
   <div class="max-w-2xl mx-auto py-10 px-6">
+    <a href="{{ url_for('dashboard') }}"
+       class="inline-flex items-center gap-1 mb-4 text-sm text-gray-600 hover:text-gray-900 transition">
+      ← Portala Dön
+    </a>
+
     <h1 class="text-2xl font-bold mb-6">Yeni Master Ekle</h1>
 
     <form action="{{ url_for('create_master') }}" method="post"

@@ -1,4 +1,6 @@
-const CACHE_NAME = 'sb-static-v1';
+// Bump this whenever a /static/ file changes - the fetch handler is cache-first,
+// so installed PWAs keep serving the old copy until the cache name changes.
+const CACHE_NAME = 'sb-static-v2';
 const STATIC_ASSETS = [
   '/static/tailwind.css',
   '/static/style.css',
